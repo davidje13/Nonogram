@@ -22,6 +22,10 @@ const gameFile = process.argv[2] || process.stdin.fd;
 const game = compileGame(JSON.parse(fs.readFileSync(gameFile)));
 const state = makeState(game);
 
-solver.solve(game.rules, state);
+try {
+  solver.solve(game.rules, state);
+} catch (e) {
+  process.stderr.write(`${e}\n\n`);
+}
 
 drawGameState(game, state);
