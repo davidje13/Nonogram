@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const { performance } = require('perf_hooks');
 
 const { drawGameState } = require('./draw.js');
 const { compileGame } = require('./game.js');
@@ -24,9 +25,13 @@ const gameFile = process.argv[2] || process.stdin.fd;
 const game = compileGame(JSON.parse(fs.readFileSync(gameFile)));
 const state = makeState(game);
 
+const tmBegin = performance.now();
+let tmEnd;
 try {
   solver.solve(game.rules, state);
+  tmEnd = performance.now();
 } catch (e) {
+  tmEnd = performance.now();
   if (e instanceof AmbiguousError) {
     process.stderr.write('Multiple solutions found. Examples (there may be more):\n\n');
     for (const exampleState of e.exampleStates) {
@@ -44,3 +49,4 @@ drawGameState(game, state);
 process.stdout.write(`\n`);
 process.stdout.write(`Short image: ${toShortByImage(game, state)}\n`);
 process.stdout.write(`Short rules: ${toShortByRules(game)}\n`);
+process.stdout.write(`Solving time: ${(tmEnd - tmBegin).toFixed(1)}ms\n`);
