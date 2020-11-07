@@ -74,7 +74,7 @@ module.exports = class Solver {
         try {
           this.solveStepOrGuess(rules, stateOn);
         } catch (e) {
-          state[trialPos] = OFF;
+          state.set(stateOff);
           return;
         }
         succeededOn = !stateOn.includes(UNKNOWN);
@@ -83,7 +83,7 @@ module.exports = class Solver {
         try {
           this.solveStepOrGuess(rules, stateOff);
         } catch (e) {
-          state[trialPos] = ON;
+          state.set(stateOn);
           return;
         }
         succeededOff = !stateOn.includes(UNKNOWN);
