@@ -9,10 +9,8 @@ module.exports = {
     return new Uint8Array(state);
   },
 
-  extract(state, rule, output = null) {
-    if (!output) {
-      output = new Uint8Array(rule.cellIndices.length);
-    }
+  extract(state, rule) {
+    const output = new Uint8Array(rule.cellIndices.length);
     rule.cellIndices.forEach((index, n) => (output[n] = state[index]));
     return output;
   },
