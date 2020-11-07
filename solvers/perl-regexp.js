@@ -3,16 +3,26 @@ const { UNKNOWN, OFF, ON } = require('../constants.js');
 const GAP = { match: [UNKNOWN, OFF], result: OFF, next: [0, 1] };
 const END = { match: [], next: [] };
 
-function addStates(target, parts, partIndex) {
-  parts[partIndex].next.forEach((n) => {
-    const targetIndex = partIndex + n;
-    let v = target.get(targetIndex);
+function addMulti(target, keys, value) {
+  keys.forEach((key) => {
+    let v = target.get(key);
     if (!v) {
       v = [];
-      target.set(targetIndex, v);
+      target.set(key, v);
     }
-    v.push(partIndex);
+    v.push(value);
   });
+}
+
+function buildPartGraph(parts) {
+  // semi-deep clone
+  const resolvedParts = parts.map((o) => Object.assign({}, o));
+  // resolve relative references between parts
+  const count = parts.length;
+  for (let i = 0; i < count; ++ i) {
+    resolvedParts[i].next = resolvedParts[i].next.map((delta) => resolvedParts[i + delta]);
+  }
+  return { first: resolvedParts[0], end: resolvedParts[count - 1] };
 }
 
 module.exports = {
@@ -31,38 +41,34 @@ module.exports = {
       parts[parts.length - 2].next.push(2); // final gap is optional
     }
     parts.push(END);
-    return parts;
+
+    return buildPartGraph(parts);
   },
-  run(parts, substate) {
-    const posStates = [];
+  run({ first, end }, substate) {
     let nextStates = new Map();
-    addStates(nextStates, parts, 0);
+    addMulti(nextStates, first.next, null);
     for (let i = 0; i < substate.length; ++ i) {
       const v = substate[i];
-      const posState = new Map();
       const curStates = nextStates;
       nextStates = new Map();
-      curStates.forEach((sources, stateIndex) => {
-        const part = parts[stateIndex];
+      curStates.forEach((sources, part) => {
         if (part.match.includes(v)) {
-          posState.set(stateIndex, sources);
-          addStates(nextStates, parts, stateIndex);
+          addMulti(nextStates, part.next, { sources, part });
         }
       });
-      posStates.push(posState);
     }
-    const successfulEndSources = nextStates.get(parts.length - 1);
-    if (!successfulEndSources) {
-      throw new Error(`failed to find match when checking '${substate}' (${parts})`);
+    const endStates = nextStates.get(end);
+    if (!endStates) {
+      throw new Error('failed to find match');
     }
-    let nextSources = new Set(successfulEndSources);
+    let nextSources = new Set(endStates);
     for (let i = substate.length; (i --) > 0; ) {
       const possible = new Set();
       const curSources = nextSources;
       nextSources = new Set();
-      for (const prevIndex of curSources) {
-        possible.add(parts[prevIndex].result);
-        posStates[i].get(prevIndex).forEach((index) => nextSources.add(index));
+      for (const prev of curSources) {
+        possible.add(prev.part.result);
+        prev.sources.forEach((source) => nextSources.add(source));
       }
       if (possible.size === 1) {
         substate[i] = [...possible][0];
