@@ -1,5 +1,9 @@
 const { UNKNOWN, ON, OFF } = require('./constants.js');
 const { cloneState, extract, amend } = require('./state.js');
+const AmbiguousError = require('./AmbiguousError.js');
+const checker = require('./solvers/perl-regexp.js');
+
+const CHECK = Symbol();
 
 module.exports = class Solver {
   constructor(solvers) {
@@ -11,10 +15,10 @@ module.exports = class Solver {
       if (!substate.includes(UNKNOWN)) {
         break;
       }
-      if (!rule[symbol]) {
-        rule[symbol] = solver.compile(rule.raw);
+      let compiled = rule[symbol];
+      if (!compiled) {
+        rule[symbol] = compiled = solver.compile(rule.raw);
       }
-      const compiled = rule[symbol];
       solver.run(compiled, substate);
     }
   }
@@ -31,40 +35,25 @@ module.exports = class Solver {
     return changed;
   }
 
+  check1D(rule, substate) {
+    let compiled = rule[CHECK];
+    if (!compiled) {
+      rule[CHECK] = compiled = checker.compile(rule.raw);
+    }
+    checker.run(compiled, substate);
+  }
+
+  check(rules, state) {
+    for (const rule of rules) {
+      this.check1D(rule, extract(state, rule));
+    }
+  }
+
   solveGuess(rules, state, trialPos) {
     const stateOn = cloneState(state);
     const stateOff = cloneState(state);
     stateOn[trialPos] = ON;
     stateOff[trialPos] = OFF;
-
-    // The best way to test the rules is to run the perl-regexp solver,
-    // so as long as we have perl-regexp loaded, we know that all unknown
-    // cells at this point could be either ON or OFF and there is no need
-    // to check the states.
-
-    //let okOn = true;
-    //let okOff = true;
-    //for (const rule of rules) {
-    //  if (rule.cellIndices.includes(trialPos)) {
-    //    if (!testRule(rule, extract(stateOn, rule))) {
-    //      okOn = false;
-    //    }
-    //    if (!testRule(rule, extract(stateOff, rule))) {
-    //      okOff = false;
-    //    }
-    //  }
-    //}
-    //if (!okOn && !okOff) {
-    //  throw new Error('failed to find possible guess for cell!');
-    //}
-    //if (!okOn) {
-    //  state[trialPos] = OFF;
-    //  return;
-    //}
-    //if (!okOff) {
-    //  state[trialPos] = ON;
-    //  return;
-    //}
 
     // run both in parallel until one has a conflict (throws an exception)
     let succeededOn = false;
@@ -73,23 +62,35 @@ module.exports = class Solver {
       if (!succeededOn) {
         try {
           this.solveStepOrGuess(rules, stateOn);
+          this.check(rules, stateOn);
+          if (!stateOn.includes(UNKNOWN)) {
+            succeededOn = true;
+          }
         } catch (e) {
+          if (e instanceof AmbiguousError) {
+            throw e;
+          }
           state.set(stateOff);
           return;
         }
-        succeededOn = !stateOn.includes(UNKNOWN);
       }
       if (!succeededOff) {
         try {
           this.solveStepOrGuess(rules, stateOff);
+          this.check(rules, stateOff);
+          if (!stateOff.includes(UNKNOWN)) {
+            succeededOff = true;
+          }
         } catch (e) {
+          if (e instanceof AmbiguousError) {
+            throw e;
+          }
           state.set(stateOn);
           return;
         }
-        succeededOff = !stateOn.includes(UNKNOWN);
       }
       if (succeededOn && succeededOff) {
-        throw new Error('game is not fully defined!');
+        throw new AmbiguousError([stateOn, stateOff]);
       }
     }
   }

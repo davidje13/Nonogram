@@ -7,7 +7,7 @@ SYMBOLS[ON]      = '#';
 
 module.exports = {
   drawGameState({ w, h, rows, cols }, state) {
-    const top = Math.max(...cols.map((clues) => clues.length));
+    const top = Math.max(1, ...cols.map((rule) => (rule?.length || 1)));
     const left = w;
     const padX = 3;
 
@@ -22,26 +22,41 @@ module.exports = {
           output[top + y][left + x * padX + i] = c;
         }
       }
-      let pos = left;
-      const clueStrs = rows[y].map(String);
-      for (const v of clueStrs) {
-        pos -= (v.length + 1);
-      }
-      for (const v of clueStrs) {
-        for (let i = 0; i < v.length; ++ i) {
-          output[top + y][pos + i] = v[i];
+      const rule = rows[y];
+      if (!rule) {
+        output[top + y][left - 2] = '?';
+      } else if (!rule.length) {
+        output[top + y][left - 2] = '0';
+      } else {
+        let pos = left;
+        const clueStrs = rule.map(String);
+        for (const v of clueStrs) {
+          pos -= (v.length + 1);
         }
-        pos += (v.length + 1);
+        for (const v of clueStrs) {
+          for (let i = 0; i < v.length; ++ i) {
+            output[top + y][pos + i] = v[i];
+          }
+          pos += (v.length + 1);
+        }
       }
     }
     for (let x = 0; x < w; ++ x) {
-      let pos = top - cols[x].length;
-      for (const clue of cols[x]) {
-        const v = String(clue);
-        for (let i = 0; i < v.length; ++ i) {
-          output[pos][left + (x + 1) * padX - 1 - v.length + i] = v[i];
+      const rule = cols[x];
+      const xx = left + (x + 1) * padX - 1;
+      if (!rule) {
+        output[top - 1][xx - 1] = '?';
+      } else if (!rule.length) {
+        output[top - 1][xx - 1] = '0';
+      } else {
+        let pos = top - rule.length;
+        for (const clue of rule) {
+          const v = String(clue);
+          for (let i = 0; i < v.length; ++ i) {
+            output[pos][xx - v.length + i] = v[i];
+          }
+          ++ pos;
         }
-        ++ pos;
       }
     }
     for (const ln of output) {
