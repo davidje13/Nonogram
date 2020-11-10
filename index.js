@@ -30,6 +30,7 @@ let tmEnd;
 try {
   solver.solve(game.rules, state);
   tmEnd = performance.now();
+  drawGameState(game, state);
 } catch (e) {
   tmEnd = performance.now();
   if (e instanceof AmbiguousError) {
@@ -39,12 +40,11 @@ try {
       process.stderr.write('\n');
     }
     process.stderr.write('Solution before uncertainty:\n\n');
+    drawGameState(game, state);
   } else {
-    process.stderr.write(`${e}\n\n`);
+    process.stderr.write(`${e}\n`);
   }
 }
-
-drawGameState(game, state);
 
 process.stdout.write(`\n`);
 process.stdout.write(`Short image: ${toShortByImage(game, state)}\n`);
