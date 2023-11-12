@@ -1,9 +1,4 @@
-import { UNKNOWN, OFF, ON } from './constants.mjs';
-
-const SYMBOLS = [];
-SYMBOLS[UNKNOWN] = '-';
-SYMBOLS[OFF]     = ' ';
-SYMBOLS[ON]      = '#';
+import { UNKNOWN } from './constants.mjs';
 
 export function makeState({ w, h }) {
   return new Uint8Array(w * h).fill(UNKNOWN);
@@ -33,17 +28,4 @@ export function amend(state, rule, update) {
     }
   });
   return change;
-}
-
-export function toString({ w, h }, state) {
-  const output = [];
-  for (let i = 0; i < h; ++ i) {
-    output.push(new Array(w).fill(' '));
-  }
-  for (let y = 0; y < h; ++ y) {
-    for (let x = 0; x < w; ++ x) {
-      output[y][x] = SYMBOLS[state[y * w + x]];
-    }
-  }
-  return output.map((ln) => ln.join('')).join('\n');
 }
