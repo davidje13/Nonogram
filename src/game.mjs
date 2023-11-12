@@ -98,46 +98,44 @@ function testRules(rows, cols) {
   }
 }
 
-module.exports = {
-  compileGame(input) {
-    let rows;
-    let cols;
-    if (input.rows && input.cols) {
-      rows = input.rows;
-      cols = input.cols;
-      testRules(rows, cols);
-    } else if (input.image) {
-      const data = rulesForImage(input.image);
-      rows = data.rows;
-      cols = data.cols;
-    } else {
-      throw new Error('No game data found');
-    }
-    const w = cols.length;
-    const h = rows.length;
+export function compileGame(input) {
+  let rows;
+  let cols;
+  if (input.rows && input.cols) {
+    rows = input.rows;
+    cols = input.cols;
+    testRules(rows, cols);
+  } else if (input.image) {
+    const data = rulesForImage(input.image);
+    rows = data.rows;
+    cols = data.cols;
+  } else {
+    throw new Error('No game data found');
+  }
+  const w = cols.length;
+  const h = rows.length;
 
-    const rules = [];
-    for (let x = 0; x < w; ++ x) {
-      if (!cols[x]) {
-        continue;
-      }
-      const cellIndices = [];
-      for (let y = 0; y < h; ++ y) {
-        cellIndices.push(y * w + x);
-      }
-      rules.push({ raw: cols[x], cellIndices });
+  const rules = [];
+  for (let x = 0; x < w; ++ x) {
+    if (!cols[x]) {
+      continue;
     }
+    const cellIndices = [];
     for (let y = 0; y < h; ++ y) {
-      if (!rows[y]) {
-        continue;
-      }
-      const cellIndices = [];
-      for (let x = 0; x < w; ++ x) {
-        cellIndices.push(y * w + x);
-      }
-      rules.push({ raw: rows[y], cellIndices });
+      cellIndices.push(y * w + x);
     }
+    rules.push({ raw: cols[x], cellIndices });
+  }
+  for (let y = 0; y < h; ++ y) {
+    if (!rows[y]) {
+      continue;
+    }
+    const cellIndices = [];
+    for (let x = 0; x < w; ++ x) {
+      cellIndices.push(y * w + x);
+    }
+    rules.push({ raw: rows[y], cellIndices });
+  }
 
-    return { w, h, rows, cols, rules };
-  },
-};
+  return { w, h, rows, cols, rules };
+}

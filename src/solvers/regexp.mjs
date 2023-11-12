@@ -1,4 +1,4 @@
-const { UNKNOWN, OFF, ON } = require('../constants.js');
+import { UNKNOWN, OFF, ON } from '../constants.mjs';
 
 const SYMBOLS = [];
 SYMBOLS[UNKNOWN] = '_';
@@ -8,7 +8,7 @@ SYMBOLS[ON]      = 'a';
 const OPTIONAL_GAP = '([ _]*)';
 const GAP = '([ _]+)';
 
-module.exports = {
+export default {
   compile(rule) {
     const parts = [OPTIONAL_GAP];
     for (const v of rule) {

@@ -1,0 +1,16 @@
+{
+  "name": "Nonogram",
+  "version": "1.0.0",
+  "author": "David Evans",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "bin": "./src/index.js",
+  "scripts": {
+    "test": "lean-test",
+    "start": "static-server --index index.html --port 8080"
+  },
+  "devDependencies": {
+    "lean-test": "2.x",
+    "static-server": "2.x"
+  }
+}

@@ -7,7 +7,7 @@ make progress on its own.
 ## Running
 
 ```bash
-./index.js games/football.json
+./src/index.js games/football.json
 ```
 
 > ```

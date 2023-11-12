@@ -1,4 +1,4 @@
-const { UNKNOWN, ON } = require('./constants');
+import { UNKNOWN, ON } from './constants.mjs';
 
 function toBase64Url(base64) {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -76,36 +76,34 @@ function encodeRules(encoder, rules, limit) {
   }
 }
 
-module.exports = {
-  toJSON(game) {
-    return JSON.stringify({
-      rows: game.rows,
-      cols: game.cols,
-    });
-  },
+export function toJSON(game) {
+  return JSON.stringify({
+    rows: game.rows,
+    cols: game.cols,
+  });
+}
 
-  toShortByImage({ w, h }, state) {
-    const encoder = new BitEncoder();
-    encoder.writeUnbounded(w);
-    encoder.writeUnbounded(h);
-    for (let y = 0; y < h; ++ y) {
-      for (let x = 0; x < w; ++ x) {
-        const c = state[y * w + x];
-        if (c === UNKNOWN) {
-          return null;
-        }
-        encoder.writeBit(c === ON);
+export function toShortByImage({ w, h }, state) {
+  const encoder = new BitEncoder();
+  encoder.writeUnbounded(w);
+  encoder.writeUnbounded(h);
+  for (let y = 0; y < h; ++ y) {
+    for (let x = 0; x < w; ++ x) {
+      const c = state[y * w + x];
+      if (c === UNKNOWN) {
+        return null;
       }
+      encoder.writeBit(c === ON);
     }
-    return encoder.toBase64();
-  },
+  }
+  return encoder.toBase64();
+}
 
-  toShortByRules({ rows, cols }) {
-    const encoder = new BitEncoder();
-    encoder.writeUnbounded(cols.length);
-    encoder.writeUnbounded(rows.length);
-    encodeRules(encoder, rows, cols.length);
-    encodeRules(encoder, cols, rows.length);
-    return encoder.toBase64();
-  },
-};
+export function toShortByRules({ rows, cols }) {
+  const encoder = new BitEncoder();
+  encoder.writeUnbounded(cols.length);
+  encoder.writeUnbounded(rows.length);
+  encodeRules(encoder, rows, cols.length);
+  encodeRules(encoder, cols, rows.length);
+  return encoder.toBase64();
+}

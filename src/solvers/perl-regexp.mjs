@@ -1,4 +1,4 @@
-const { UNKNOWN, OFF, ON } = require('../constants.js');
+import { UNKNOWN, OFF, ON } from '../constants.mjs';
 
 const GAP = { match: [UNKNOWN, OFF], result: OFF, next: [0, 1] };
 const END = { match: [], next: [] };
@@ -25,7 +25,7 @@ function buildPartGraph(parts) {
   return { first: resolvedParts[0], end: resolvedParts[count - 1] };
 }
 
-module.exports = {
+export default {
   compile(rule) {
     const parts = [
       { match: [], next: [1, 2] }, // first gap is optional

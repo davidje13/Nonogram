@@ -1,6 +1,6 @@
-const { OFF, ON } = require('../constants.js');
+import { OFF, ON } from '../constants.mjs';
 
-module.exports = {
+export default {
   compile(rule) {
     let len = 0;
     for (const v of rule) {

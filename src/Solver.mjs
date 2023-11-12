@@ -1,11 +1,11 @@
-const { UNKNOWN, ON, OFF } = require('./constants.js');
-const { cloneState, extract, amend } = require('./state.js');
-const AmbiguousError = require('./AmbiguousError.js');
-const checker = require('./solvers/perl-regexp.js');
+import { UNKNOWN, ON, OFF } from './constants.mjs';
+import { cloneState, extract, amend } from './state.mjs';
+import { AmbiguousError } from './AmbiguousError.mjs';
+import checker from './solvers/perl-regexp.mjs';
 
 const CHECK = Symbol();
 
-module.exports = class Solver {
+export class Solver {
   constructor(solvers) {
     this.solvers = solvers.map((solver) => ({ solver, symbol: Symbol() }));
   }
@@ -106,4 +106,4 @@ module.exports = class Solver {
       this.solveStepOrGuess(rules, state);
     }
   }
-};
+}

@@ -1,4 +1,4 @@
-const { OFF, ON } = require('../constants.js');
+import { OFF, ON } from '../constants.mjs';
 
 function extractBlocks(substate) {
   const found = [];
@@ -26,7 +26,7 @@ function extractBlocks(substate) {
   return found;
 }
 
-module.exports = {
+export default {
   compile(rule) {
     return rule;
   },

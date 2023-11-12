@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const { performance } = require('perf_hooks');
+import { readFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 
-const { drawGameState } = require('./draw.js');
-const { compileGame } = require('./game.js');
-const { makeState } = require('./state.js');
-const Solver = require('./Solver.js');
-const AmbiguousError = require('./AmbiguousError.js');
-const { toShortByImage, toShortByRules } = require('./export.js');
-const solverTrivial = require('./solvers/trivial.js');
-const solverRegexp = require('./solvers/regexp.js');
-const solverPerlRegexp = require('./solvers/perl-regexp.js');
-const solverCaps = require('./solvers/caps.js');
+import { drawGameState } from './draw.mjs';
+import { compileGame } from './game.mjs';
+import { makeState } from './state.mjs';
+import { Solver } from './Solver.mjs';
+import { AmbiguousError } from './AmbiguousError.mjs';
+import { toShortByImage, toShortByRules } from './export.mjs';
+import solverTrivial from './solvers/trivial.mjs';
+import solverRegexp from './solvers/regexp.mjs';
+import solverPerlRegexp from './solvers/perl-regexp.mjs';
+import solverCaps from './solvers/caps.mjs';
 
 const solver = new Solver([
   //solverTrivial,
@@ -22,7 +22,7 @@ const solver = new Solver([
 ]);
 
 function run(gameFile) {
-  const game = compileGame(JSON.parse(fs.readFileSync(gameFile)));
+  const game = compileGame(JSON.parse(readFileSync(gameFile)));
   const state = makeState(game);
 
   const tmBegin = performance.now();
