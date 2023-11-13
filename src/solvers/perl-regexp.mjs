@@ -25,7 +25,14 @@ function buildPartGraph(parts) {
   return { first: resolvedParts[0], end: resolvedParts[count - 1] };
 }
 
+/**
+ * The perlRegexp solver can solve all 1D states perfectly.
+ *
+ * It can solve most games, but occasionally needs assistance from a branching guess
+ * when multiple rules must be combined to progress.
+ */
 export default {
+  difficulty: 10,
   compile(rule) {
     const parts = [
       { match: [], next: [1, 2] }, // first gap is optional

@@ -8,7 +8,14 @@ SYMBOLS[ON]      = 'a';
 const OPTIONAL_GAP = '([ _]*)';
 const GAP = '([ _]+)';
 
+/**
+ * The regexp solver is intentionally inferior to the perlRegexp solver, and represents
+ * a simpler mental model for solving games (which can be used to infer difficulty).
+ *
+ * It can solve many games, but occasionally needs more advanced help.
+ */
 export default {
+  difficulty: 4,
   compile(rule) {
     const parts = [OPTIONAL_GAP];
     for (const v of rule) {

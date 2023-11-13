@@ -1,4 +1,4 @@
-import { OFF, ON } from '../constants.mjs';
+import { OFF, ON, UNKNOWN } from '../constants.mjs';
 
 function extractBlocks(substate) {
   const found = [];
@@ -26,7 +26,15 @@ function extractBlocks(substate) {
   return found;
 }
 
+/**
+ * The caps solver is untentionally inferior to the regexp solver, and represents a
+ * very simple mental model for solving games (which can be used to infer difficulty)
+ *
+ * It is unable to solve any games alone, but the situations it applies to are obvious
+ * to a human and represent a low difficulty.
+ */
 export default {
+  difficulty: 2,
   compile(rule) {
     return rule;
   },
@@ -65,6 +73,15 @@ export default {
           throw new Error('incorrect block length found!');
         }
         remaining.splice(pos, 1);
+      }
+    }
+
+    if (!remaining.length) {
+      // found everything; all unknown items must be blank
+      for (let i = 0; i < substate.length; ++i) {
+        if (substate[i] === UNKNOWN) {
+          substate[i] = OFF;
+        }
       }
     }
   },
