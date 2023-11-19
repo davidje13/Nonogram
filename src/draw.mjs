@@ -1,9 +1,10 @@
-import { UNKNOWN, OFF, ON } from './constants.mjs';
+import { UNKNOWN, OFF, ON, UNKNOWABLE } from './constants.mjs';
 
 const SYMBOLS = [];
-SYMBOLS[UNKNOWN] = '-';
-SYMBOLS[OFF]     = ' ';
-SYMBOLS[ON]      = '#';
+SYMBOLS[UNKNOWN]    = '-';
+SYMBOLS[OFF]        = ' ';
+SYMBOLS[ON]         = '#';
+SYMBOLS[UNKNOWABLE] = '?';
 
 export function drawGameState({ w, h, rows, cols }, state) {
   const top = Math.max(1, ...cols.map((rule) => (rule?.length || 1)));

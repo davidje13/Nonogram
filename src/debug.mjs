@@ -1,9 +1,10 @@
-import { UNKNOWN, OFF, ON } from './constants.mjs';
+import { UNKNOWN, OFF, ON, UNKNOWABLE } from './constants.mjs';
 
 const SYMBOLS = [];
-SYMBOLS[UNKNOWN] = '-';
-SYMBOLS[OFF]     = ' ';
-SYMBOLS[ON]      = '#';
+SYMBOLS[UNKNOWN]    = '-';
+SYMBOLS[OFF]        = ' ';
+SYMBOLS[ON]         = '#';
+SYMBOLS[UNKNOWABLE] = '?';
 
 const RSYMBOLS = Object.fromEntries(SYMBOLS.map((v, k) => [v, k]));
 
