@@ -13,12 +13,14 @@ import solverTrivial from './solvers/trivial.mjs';
 import solverRegexp from './solvers/regexp.mjs';
 import solverPerlRegexp from './solvers/perl-regexp.mjs';
 import solverCaps from './solvers/caps.mjs';
+import solverFork from './multi-rule-solvers/fork.mjs';
 
 const solver = new Solver([
   //solverTrivial,
   //solverRegexp,
   //solverCaps,
   solverPerlRegexp,
+  solverFork,
 ]);
 
 function run(gameFile) {
