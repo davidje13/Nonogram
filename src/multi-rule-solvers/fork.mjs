@@ -64,9 +64,6 @@ function pickGuessSpot(rules, state, ctx, sharedState) {
 
 export default {
   multiRule: true,
-  compile(rules) {
-    return rules;
-  },
   run(rules, state, ctx, sharedState) {
     const trialPos = pickGuessSpot(rules, state, ctx, sharedState);
     //process.stderr.write(`Guessing at position ${trialPos}\n`);

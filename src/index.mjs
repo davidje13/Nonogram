@@ -23,7 +23,7 @@ const solver = new Solver([
   //solverCaps,
   solverPerlRegexp,
   solverImplications(10),
-  //solverFork,
+  solverFork,
 ]);
 
 function run(gameFile) {

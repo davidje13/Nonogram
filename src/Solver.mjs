@@ -12,7 +12,7 @@ export class Solver {
       .map((solver) => ({ solver, symbol: Symbol() }));
     this._multiRuleSolvers = solvers
       .filter(({ multiRule }) => multiRule)
-      .map((solver) => ({ solver, symbol: Symbol() }));
+      .map((solver) => ({ solver }));
     this._checker = checker;
   }
 
@@ -61,12 +61,8 @@ export class Solver {
       return true;
     }
     const sharedState = {};
-    for (const { solver, symbol } of this._multiRuleSolvers) {
-      let compiled = rules[symbol];
-      if (!compiled) {
-        rules[symbol] = compiled = solver.compile(rules);
-      }
-      if (solver.run(compiled, state, this, sharedState)) {
+    for (const { solver } of this._multiRuleSolvers) {
+      if (solver.run(rules, state, this, sharedState)) {
         return true;
       }
     }
