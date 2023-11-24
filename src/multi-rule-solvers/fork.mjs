@@ -34,16 +34,28 @@ function countUnknown(substate) {
   return count;
 }
 
-function pickGuessSpot(rules, state, ctx) {
-  // shallow breadth-first search to find a good candidate location for making a guess
+function pickGuessSpot(rules, state, ctx, sharedState) {
   let bestI = 0;
   let bestN = -1;
-  for (let i = 0; i < state.length; ++i) {
-    if (state[i] === UNKNOWN) {
-      const n = judgeImportance(rules, state, i, ctx);
+
+  if (sharedState.impacts) {
+    // another rule already did the hard work for us
+    for (const [i, { on, off }] of sharedState.impacts.entries()) {
+      const n = Math.log(on) + Math.log(off);
       if (n > bestN) {
         bestI = i;
         bestN = n;
+      }
+    }
+  } else {
+    // shallow breadth-first search to find a good candidate location for making a guess
+    for (let i = 0; i < state.length; ++i) {
+      if (state[i] === UNKNOWN) {
+        const n = judgeImportance(rules, state, i, ctx);
+        if (n > bestN) {
+          bestI = i;
+          bestN = n;
+        }
       }
     }
   }
@@ -52,8 +64,11 @@ function pickGuessSpot(rules, state, ctx) {
 
 export default {
   multiRule: true,
-  run(rules, state, ctx) {
-    const trialPos = pickGuessSpot(rules, state, ctx);
+  compile(rules) {
+    return rules;
+  },
+  run(rules, state, ctx, sharedState) {
+    const trialPos = pickGuessSpot(rules, state, ctx, sharedState);
     //process.stderr.write(`Guessing at position ${trialPos}\n`);
 
     const stateOn = cloneState(state);

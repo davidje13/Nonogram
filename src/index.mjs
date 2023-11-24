@@ -8,11 +8,13 @@ import { compileGame } from './game.mjs';
 import { makeState } from './state.mjs';
 import { Solver } from './Solver.mjs';
 import { AmbiguousError } from './AmbiguousError.mjs';
+import { StuckError } from './StuckError.mjs';
 import { toShortByImage, toShortByRules } from './export.mjs';
 import solverTrivial from './solvers/trivial.mjs';
 import solverRegexp from './solvers/regexp.mjs';
 import solverPerlRegexp from './solvers/perl-regexp.mjs';
 import solverCaps from './solvers/caps.mjs';
+import solverImplications from './multi-rule-solvers/implications.mjs';
 import solverFork from './multi-rule-solvers/fork.mjs';
 
 const solver = new Solver([
@@ -20,7 +22,8 @@ const solver = new Solver([
   //solverRegexp,
   //solverCaps,
   solverPerlRegexp,
-  solverFork,
+  solverImplications(10),
+  //solverFork,
 ]);
 
 function run(gameFile) {
@@ -42,6 +45,9 @@ function run(gameFile) {
         process.stderr.write('\n');
       }
       process.stderr.write('Solution before uncertainty:\n\n');
+      drawGameState(game, state);
+    } else if (e instanceof StuckError) {
+      process.stderr.write('Stuck while solving with currently configured methods:\n\n');
       drawGameState(game, state);
     } else {
       process.stderr.write(`${e}\n`);

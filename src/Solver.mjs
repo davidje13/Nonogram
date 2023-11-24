@@ -7,8 +7,12 @@ const CHECK = Symbol();
 
 export class Solver {
   constructor(solvers, checker = solverPerlRegexp) {
-    this._singleRuleSolvers = solvers.filter(({ multiRule }) => !multiRule).map((solver) => ({ solver, symbol: Symbol() }));
-    this._multiRuleSolvers = solvers.filter(({ multiRule }) => multiRule).map((solver) => ({ solver }));
+    this._singleRuleSolvers = solvers
+      .filter(({ multiRule }) => !multiRule)
+      .map((solver) => ({ solver, symbol: Symbol() }));
+    this._multiRuleSolvers = solvers
+      .filter(({ multiRule }) => multiRule)
+      .map((solver) => ({ solver, symbol: Symbol() }));
     this._checker = checker;
   }
 
@@ -56,8 +60,13 @@ export class Solver {
     if (changed) {
       return true;
     }
-    for (const { solver } of this._multiRuleSolvers) {
-      if (solver.run(rules, state, this)) {
+    const sharedState = {};
+    for (const { solver, symbol } of this._multiRuleSolvers) {
+      let compiled = rules[symbol];
+      if (!compiled) {
+        rules[symbol] = compiled = solver.compile(rules);
+      }
+      if (solver.run(compiled, state, this, sharedState)) {
         return true;
       }
     }
