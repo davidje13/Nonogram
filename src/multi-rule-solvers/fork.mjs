@@ -1,5 +1,5 @@
 import { UNKNOWN, ON, OFF } from '../constants.mjs';
-import { cloneState, cloneSubstate, extract } from '../state.mjs';
+import { cloneSubstate, extract } from '../state.mjs';
 import { AmbiguousError } from '../AmbiguousError.mjs';
 
 function judgeImportance(rules, state, position, ctx) {
@@ -68,8 +68,8 @@ export default {
     const trialPos = pickGuessSpot(rules, state, ctx, sharedState);
     //process.stderr.write(`Guessing at position ${trialPos}\n`);
 
-    const stateOn = cloneState(state);
-    const stateOff = cloneState(state);
+    const stateOn = ctx.cloneState(state);
+    const stateOff = ctx.cloneState(state);
     stateOn[trialPos] = ON;
     stateOff[trialPos] = OFF;
 
@@ -89,7 +89,7 @@ export default {
           if (e instanceof AmbiguousError) {
             throw e;
           }
-          state.set(stateOff);
+          ctx.moveState(stateOff, state);
           return true;
         }
       }
@@ -105,7 +105,7 @@ export default {
           if (e instanceof AmbiguousError) {
             throw e;
           }
-          state.set(stateOn);
+          ctx.moveState(stateOn, state);
           return true;
         }
       }

@@ -1,9 +1,10 @@
 import { UNKNOWN } from './constants.mjs';
-import { extract, amend } from './state.mjs';
+import { cloneState, extract, amend } from './state.mjs';
 import { StuckError } from './StuckError.mjs';
 import solverPerlRegexp from './solvers/perl-regexp.mjs';
 
 const CHECK = Symbol();
+const CACHE = Symbol();
 
 export class Solver {
   constructor(solvers, checker = solverPerlRegexp) {
@@ -46,6 +47,35 @@ export class Solver {
 
   isComplete(state) {
     return !state.includes(UNKNOWN);
+  }
+
+  getStateCache(state, id) {
+    let cache = state[CACHE]?.get(id);
+    if (!cache) {
+      if (!state[CACHE]) {
+        state[CACHE] = new Map();
+      }
+      cache = new Map();
+      state[CACHE].set(id, cache);
+    }
+    return cache;
+  }
+
+  cloneState(state) {
+    const copy = cloneState(state);
+    if (state[CACHE]) {
+      const cache = new Map();
+      for (const [k, v] of state[CACHE].entries()) {
+        cache.set(k, new Map(v));
+      }
+      copy[CACHE] = cache;
+    }
+    return copy;
+  }
+
+  moveState(source, target) {
+    target.set(source);
+    target[CACHE] = source[CACHE];
   }
 
   solveStep(rules, state) {
