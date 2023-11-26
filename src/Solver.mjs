@@ -3,7 +3,6 @@ import { cloneState, extract, amend } from './state.mjs';
 import { StuckError } from './StuckError.mjs';
 import solverPerlRegexp from './solvers/perl-regexp.mjs';
 
-const CHECK = Symbol();
 const CACHE = Symbol();
 
 export class Solver {
@@ -14,6 +13,7 @@ export class Solver {
     this._multiRuleSolvers = solvers
       .filter(({ multiRule }) => multiRule)
       .map((solver) => ({ solver }));
+    this._checkerSymbol = Symbol();
     this._checker = checker;
   }
 
@@ -31,9 +31,9 @@ export class Solver {
   }
 
   checkSingleRule(rule, substate) {
-    let compiled = rule[CHECK];
+    let compiled = rule[this._checkerSymbol];
     if (!compiled) {
-      rule[CHECK] = compiled = this._checker.compile(rule.raw);
+      rule[this._checkerSymbol] = compiled = this._checker.compile(rule.raw);
     }
     this._checker.run(compiled, substate);
   }

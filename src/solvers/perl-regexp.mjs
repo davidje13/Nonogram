@@ -1,7 +1,18 @@
 import { UNKNOWN, OFF, ON } from '../constants.mjs';
 
-const GAP = { match: [UNKNOWN, OFF], result: OFF, next: [0, 1] };
-const END = { match: [], next: [] };
+const EMPTY = matcher([]);
+const UNKNOWN_OR_OFF = matcher([UNKNOWN, OFF]);
+const UNKNOWN_OR_ON = matcher([UNKNOWN, ON]);
+const GAP = { match: UNKNOWN_OR_OFF, result: OFF, next: [0, 1] };
+const END = { match: EMPTY, next: [] };
+
+function matcher(values) {
+  const r = [false, false, false];
+  for (let i = 0; i < 3; ++i) {
+    r[i] = values.includes(i);
+  }
+  return r;
+}
 
 function addMulti(target, keys, value) {
   keys.forEach((key) => {
@@ -16,7 +27,7 @@ function addMulti(target, keys, value) {
 
 function buildPartGraph(parts) {
   // semi-deep clone
-  const resolvedParts = parts.map((o) => Object.assign({}, o));
+  const resolvedParts = parts.map((o) => ({ ...o }));
   // resolve relative references between parts
   const count = parts.length;
   for (let i = 0; i < count; ++ i) {
@@ -35,12 +46,12 @@ export default {
   difficulty: 10,
   compile(rule) {
     const parts = [
-      { match: [], next: [1, 2] }, // first gap is optional
+      { match: EMPTY, next: [1, 2] }, // first gap is optional
       GAP,
     ];
     for (const v of rule) {
       for (let i = 0; i < v; ++ i) {
-        parts.push({ match: [UNKNOWN, ON], result: ON, next: [1] });
+        parts.push({ match: UNKNOWN_OR_ON, result: ON, next: [1] });
       }
       parts.push(GAP);
     }
@@ -59,7 +70,7 @@ export default {
       const curStates = nextStates;
       nextStates = new Map();
       curStates.forEach((sources, part) => {
-        if (part.match.includes(v)) {
+        if (part.match[v]) {
           addMulti(nextStates, part.next, { sources, part });
         }
       });
@@ -75,10 +86,12 @@ export default {
       nextSources = new Set();
       for (const prev of curSources) {
         possible.add(prev.part.result);
-        prev.sources.forEach((source) => nextSources.add(source));
+        for (const source of prev.sources) {
+          nextSources.add(source);
+        }
       }
       if (possible.size === 1) {
-        substate[i] = [...possible][0];
+        substate[i] = possible.values().next().value;
       }
     }
   },
