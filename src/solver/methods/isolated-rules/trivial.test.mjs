@@ -1,11 +1,10 @@
-import { stateFromString, stateToString1D } from '../debug.mjs';
-import solverTrivial from './trivial.mjs';
+import { stateFromString, stateToString1D } from '../../../debug.mjs';
+import { trivial } from './trivial.mjs';
 
-describe('solverTrivial', () => {
+describe('trivial', () => {
   it('populates line-spanning rules', ({ rule, input, expected }) => {
-    const pattern = solverTrivial.compile(rule);
     const state = stateFromString(input);
-    solverTrivial.run(pattern, state);
+    trivial(rule)(state);
     expect(stateToString1D(state)).equals(expected);
   }, { parameters: [
     { rule: [], input: '-----', expected: '     ' },

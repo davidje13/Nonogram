@@ -1,17 +1,19 @@
-import { UNKNOWN, ON, OFF } from '../constants.mjs';
-import { cloneSubstate, extract } from '../state.mjs';
+import { UNKNOWN, ON, OFF } from '../../constants.mjs';
+import { InvalidGameError } from '../errors.mjs';
+import { perlRegexp } from './isolated-rules/perl-regexp.mjs';
 
 const IMPLICATIONS_CACHE = Symbol();
 
-function buildImplications(rules, state, ctx) {
+function buildImplications(auxRules, state) {
   const implications = [];
-  for (let i = 0; i < state.length * 2; ++i) {
+  for (let i = 0; i < state.board.length * 2; ++i) {
     implications.push([]);
   }
-  const cacheMap = ctx.getStateCache(state, IMPLICATIONS_CACHE);
-  for (const rule of rules) {
-    const initial = extract(state, rule);
-    let cached = cacheMap.get(rule);
+  const cacheMap = state.getCache(IMPLICATIONS_CACHE);
+  for (const auxRule of auxRules) {
+    const initial = new Uint8Array(auxRule.cellIndices.length);
+    state.readSubstate(initial, auxRule.cellIndices);
+    let cached = cacheMap.get(auxRule);
     let cacheMatch = Boolean(cached) && cached.state.length === initial.length;
     let unknownCount = 0;
     for (let i = 0; i < initial.length; ++i) {
@@ -23,32 +25,40 @@ function buildImplications(rules, state, ctx) {
     }
     if (!cacheMatch) {
       cached = { state: initial, results: [] };
-      cacheMap.set(rule, cached);
+      cacheMap.set(auxRule, cached);
       for (let i = 0; i < initial.length; ++i) {
         if (initial[i] !== UNKNOWN) {
           continue;
         }
 
-        const substateOn = cloneSubstate(initial);
-        const substateOff = cloneSubstate(initial);
+        const substateOn = new Uint8Array(initial);
+        const substateOff = new Uint8Array(initial);
         substateOn[i] = ON;
         substateOff[i] = OFF;
-        ctx.solveSingleRule(rule, substateOn);
-        ctx.solveSingleRule(rule, substateOff);
+        try {
+          auxRule.solve(substateOn);
+        } catch (e) {
+          substateOn[i] = OFF; // set up a contradiction as this state is invalid
+        }
+        try {
+          auxRule.solve(substateOff);
+        } catch (e) {
+          substateOff[i] = ON; // set up a contradiction as this state is invalid
+        }
 
         const impOff = [];
         const impOn = [];
         for (let j = 0; j < initial.length; ++j) {
-          if (initial[j] === UNKNOWN && j !== i) {
+          if (initial[j] === UNKNOWN) {
             if (substateOn[j] !== UNKNOWN) {
-              impOn.push(rule.cellIndices[j] * 2 + (substateOn[j] === ON ? 1 : 0));
+              impOn.push(auxRule.cellIndices[j] * 2 + (substateOn[j] === ON ? 1 : 0));
             }
             if (substateOff[j] !== UNKNOWN) {
-              impOff.push(rule.cellIndices[j] * 2 + (substateOff[j] === ON ? 1 : 0));
+              impOff.push(auxRule.cellIndices[j] * 2 + (substateOff[j] === ON ? 1 : 0));
             }
           }
         }
-        cached.results.push({ cell: rule.cellIndices[i], impOn, impOff });
+        cached.results.push({ cell: auxRule.cellIndices[i], impOn, impOff });
       }
     }
     for (const { cell, impOn, impOff } of cached.results) {
@@ -81,14 +91,17 @@ function resolveImplications(implications, cell, value, depth) {
   return resolved;
 }
 
-export default (depth = 10) => ({
-  multiRule: true,
-  run(rules, state, ctx, sharedState) {
-    const implications = buildImplications(rules, state, ctx);
-    let changed = false;
+export const implications = (implicationFinder = perlRegexp, depth = 10) => (rules) => {
+  const auxRules = rules.map(({ raw, cellIndices }) => ({
+    cellIndices,
+    solve: implicationFinder(raw),
+  }));
+
+  return function* (state, { sharedState }) {
+    const implications = buildImplications(auxRules, state);
     const impacts = new Map();
-    for (let cell = 0; cell < state.length; ++cell) {
-      if (state[cell] !== UNKNOWN) {
+    for (let cell = 0; cell < state.board.length; ++cell) {
+      if (state.board[cell] !== UNKNOWN) {
         continue;
       }
       const onImp = resolveImplications(implications, cell, ON, depth);
@@ -96,21 +109,20 @@ export default (depth = 10) => ({
       if (onImp !== null && offImp !== null) {
         for (const p of onImp) {
           if (offImp.has(p)) {
-            state[p >>> 1] = (p & 1) ? ON : OFF;
-            changed = true;
+            state.board[p >>> 1] = (p & 1) ? ON : OFF;
+            state.changed = true;
           }
         }
         impacts.set(cell, { on: onImp.size, off: offImp.size });
       } else if (onImp !== null || offImp !== null) {
         for (const p of (onImp ?? offImp)) {
-          state[p >>> 1] = (p & 1) ? ON : OFF;
+          state.board[p >>> 1] = (p & 1) ? ON : OFF;
         }
-        changed = true;
+        state.changed = true;
       } else {
-        throw new Error('impossible game');
+        throw new InvalidGameError(`cell at index ${cell} can be neither on nor off`);
       }
     }
     sharedState.impacts = impacts;
-    return changed;
-  },
-});
+  };
+};

@@ -1,4 +1,5 @@
-import { UNKNOWN, OFF, ON } from '../constants.mjs';
+import { UNKNOWN, OFF, ON } from '../../../constants.mjs';
+import { InvalidGameError } from '../../errors.mjs';
 
 const EMPTY = matcher([]);
 const UNKNOWN_OR_OFF = matcher([UNKNOWN, OFF]);
@@ -42,27 +43,24 @@ function buildPartGraph(parts) {
  * It can solve most games, but occasionally needs assistance from a branching guess
  * when multiple rules must be combined to progress.
  */
-export default {
-  difficulty: 10,
-  compile(rule) {
-    const parts = [
-      { match: EMPTY, next: [1, 2] }, // first gap is optional
-      GAP,
-    ];
-    for (const v of rule) {
-      for (let i = 0; i < v; ++ i) {
-        parts.push({ match: UNKNOWN_OR_ON, result: ON, next: [1] });
-      }
-      parts.push(GAP);
+export const perlRegexp = (rule) => {
+  const parts = [
+    { match: EMPTY, next: [1, 2] }, // first gap is optional
+    GAP,
+  ];
+  for (const v of rule) {
+    for (let i = 0; i < v; ++ i) {
+      parts.push({ match: UNKNOWN_OR_ON, result: ON, next: [1] });
     }
-    if (rule.length) {
-      parts[parts.length - 2].next.push(2); // final gap is optional
-    }
-    parts.push(END);
+    parts.push(GAP);
+  }
+  if (rule.length) {
+    parts[parts.length - 2].next.push(2); // final gap is optional
+  }
+  parts.push(END);
+  const { first, end } = buildPartGraph(parts);
 
-    return buildPartGraph(parts);
-  },
-  run({ first, end }, substate) {
+  return (substate) => {
     let nextStates = new Map();
     addMulti(nextStates, first.next, null);
     for (let i = 0; i < substate.length; ++ i) {
@@ -77,7 +75,7 @@ export default {
     }
     const endStates = nextStates.get(end);
     if (!endStates) {
-      throw new Error('failed to find match');
+      throw new InvalidGameError(`no match for rule ${rule.join('/')} (state: "${[...substate].map((v) => v === ON ? '#' : v === OFF ? ' ' : '-').join('')}")`);
     }
     let nextSources = new Set(endStates);
     for (let i = substate.length; (i --) > 0; ) {
@@ -94,5 +92,5 @@ export default {
         substate[i] = possible.values().next().value;
       }
     }
-  },
+  };
 };

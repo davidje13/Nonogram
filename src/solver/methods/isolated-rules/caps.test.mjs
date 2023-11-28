@@ -1,11 +1,10 @@
-import { stateFromString, stateToString1D } from '../debug.mjs';
-import solverCaps from './caps.mjs';
+import { stateFromString, stateToString1D } from '../../../debug.mjs';
+import { caps } from './caps.mjs';
 
-describe('solverCaps', () => {
+describe('caps', () => {
   it('marks end caps of blocks which cannot be longer', ({ rule, input, expected }) => {
-    const pattern = solverCaps.compile(rule);
     const state = stateFromString(input);
-    solverCaps.run(pattern, state);
+    caps(rule)(state);
     expect(stateToString1D(state)).equals(expected);
   }, { parameters: [
     { rule: [3], input: '--###--', expected: '  ###  ' },

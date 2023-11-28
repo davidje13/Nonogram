@@ -6,25 +6,29 @@ import { performance } from 'node:perf_hooks';
 import { drawGameState } from './draw.mjs';
 import { compileGame } from './game.mjs';
 import { makeState } from './state.mjs';
-import { Solver } from './Solver.mjs';
-import { AmbiguousError } from './AmbiguousError.mjs';
-import { StuckError } from './StuckError.mjs';
 import { toShortByImage, toShortByRules } from './export.mjs';
-import solverTrivial from './solvers/trivial.mjs';
-import solverRegexp from './solvers/regexp.mjs';
-import solverPerlRegexp from './solvers/perl-regexp.mjs';
-import solverCaps from './solvers/caps.mjs';
-import solverImplications from './multi-rule-solvers/implications.mjs';
-import solverFork from './multi-rule-solvers/fork.mjs';
+import { solver } from './solver/solver.mjs';
+import { AmbiguousError, InvalidGameError, StuckError } from './solver/errors.mjs';
+import { implications } from './solver/methods/implications.mjs';
+import { parallelFork, synchronousFork } from './solver/methods/fork.mjs';
+import { isolatedRules } from './solver/methods/isolated-rules.mjs';
+import { trivial } from './solver/methods/isolated-rules/trivial.mjs';
+import { regExp } from './solver/methods/isolated-rules/regexp.mjs';
+import { perlRegexp } from './solver/methods/isolated-rules/perl-regexp.mjs';
+import { caps } from './solver/methods/isolated-rules/caps.mjs';
 
-const solver = new Solver([
-  //solverTrivial,
-  //solverRegexp,
-  //solverCaps,
-  solverPerlRegexp,
-  solverImplications(10),
-  solverFork,
-]);
+const fastSolver = solver(
+  isolatedRules(perlRegexp),
+  implications(perlRegexp, 10),
+  synchronousFork(perlRegexp),
+);
+
+//const difficultyJudgeSolver = solver(
+//  isolatedRules(trivial, caps, regExp, perlRegexp),
+//  implications(perlRegexp, 2),
+//  implications(perlRegexp, 10),
+//  fork(perlRegexp),
+//);
 
 function run(gameFile) {
   const game = compileGame(JSON.parse(readFileSync(gameFile)));
@@ -33,7 +37,7 @@ function run(gameFile) {
   const tmBegin = performance.now();
   let tmEnd;
   try {
-    solver.solve(game.rules, state);
+    fastSolver(game.rules).solve(state);
     tmEnd = performance.now();
     drawGameState(game, state);
   } catch (e) {
@@ -49,8 +53,12 @@ function run(gameFile) {
     } else if (e instanceof StuckError) {
       process.stderr.write('Stuck while solving with currently configured methods:\n\n');
       drawGameState(game, state);
+    } else if (e instanceof InvalidGameError) {
+      process.stderr.write(`Game does not have a well-defined solution: ${e.message}\n`);
+      process.stderr.write('Progress: (other possible partial solutions exist)\n\n');
+      drawGameState(game, state);
     } else {
-      process.stderr.write(`${e}\n`);
+      throw e;
     }
   }
 

@@ -1,11 +1,10 @@
-import { stateFromString, stateToString1D } from '../debug.mjs';
-import solverRegexp from './regexp.mjs';
+import { stateFromString, stateToString1D } from '../../../debug.mjs';
+import { regExp } from './regexp.mjs';
 
-describe('solverRegexp', () => {
+describe('regExp', () => {
   it('solves most types of single line', ({ rule, input, expected }) => {
-    const pattern = solverRegexp.compile(rule);
     const state = stateFromString(input);
-    solverRegexp.run(pattern, state);
+    regExp(rule)(state);
     expect(stateToString1D(state)).equals(expected);
   }, { parameters: [
     { rule: [], input: '----', expected: '    ' },

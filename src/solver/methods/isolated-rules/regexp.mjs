@@ -1,4 +1,5 @@
-import { UNKNOWN, OFF, ON } from '../constants.mjs';
+import { UNKNOWN, OFF, ON } from '../../../constants.mjs';
+import { InvalidGameError } from '../../errors.mjs';
 
 const SYMBOLS = [];
 SYMBOLS[UNKNOWN] = '_';
@@ -14,21 +15,19 @@ const GAP = '([ _]+)';
  *
  * It can solve many games, but occasionally needs more advanced help.
  */
-export default {
-  difficulty: 4,
-  compile(rule) {
-    const parts = [OPTIONAL_GAP];
-    for (const v of rule) {
-      parts.push(`([_a]{${v}})`, GAP);
-    }
-    parts.pop();
-    parts.push(OPTIONAL_GAP);
-    const regF = new RegExp('^' + parts.join('') + '$');
-    parts.reverse();
-    const regR = new RegExp('^' + parts.join('') + '$');
-    return { regF, regR, count: parts.length };
-  },
-  run({ regF, regR, count }, substate) {
+export const regExp = (rule) => {
+  const parts = [OPTIONAL_GAP];
+  for (const v of rule) {
+    parts.push(`([_a]{${v}})`, GAP);
+  }
+  parts.pop();
+  parts.push(OPTIONAL_GAP);
+  const regF = new RegExp('^' + parts.join('') + '$');
+  parts.reverse();
+  const regR = new RegExp('^' + parts.join('') + '$');
+  const count = parts.length;
+
+  return (substate) => {
     const symbols = Array.from(substate).map((v) => SYMBOLS[v]);
     const targetF = symbols.join('');
     symbols.reverse();
@@ -36,7 +35,7 @@ export default {
     const matchF = regF.exec(targetF);
     const matchR = regR.exec(targetR);
     if (!matchF || !matchR) {
-      throw new Error(`failed to find match when checking '${targetF}' (${regF}) & '${targetR}' (${regR})`);
+      throw new InvalidGameError(`no match when checking '${targetF}' (${regF}) & '${targetR}' (${regR})`);
     }
 
     let pF = 0;
@@ -53,5 +52,5 @@ export default {
       pF = endF;
       pR = endR;
     }
-  },
+  };
 };
