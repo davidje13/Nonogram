@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import { drawGameBoard } from './draw.mjs';
-import { compileGame } from './game.mjs';
+import { compileGame, extractRules } from './game.mjs';
 import { makeBoard } from './board.mjs';
 import { toShortByImage, toShortByRules } from './export.mjs';
 import { solver } from './solver/solver.mjs';
@@ -35,7 +35,8 @@ const fastSolver = solver(
 //);
 
 function run(gameFile) {
-  const game = compileGame(JSON.parse(readFileSync(gameFile)));
+  const rules = extractRules(JSON.parse(readFileSync(gameFile)));
+  const game = compileGame(rules);
   const board = makeBoard(game);
 
   const tmBegin = performance.now();

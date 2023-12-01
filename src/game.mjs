@@ -2,23 +2,33 @@ function isCellOn(cell) {
   return cell && cell !== ' ';
 }
 
-function rulesForImage(image) {
-  if (!Array.isArray(image)) {
-    image = image.split('\n');
+function stringToImage(str) {
+  if (!Array.isArray(str)) {
+    str = str.split('\n');
   }
-  const w = image[0].length;
-  const h = image.length;
+  const width = str[0].length;
+  const height = str.length;
+  const data = new Uint8Array(width * height);
+  for (let y = 0; y < height; ++y) {
+    if (str[y].length !== width) {
+      throw new Error('Malformed image in game data');
+    }
+    for (let x = 0; x < width; ++x) {
+      data[y * width + x] = isCellOn(str[y][x]);
+    }
+  }
+  return { width, height, data };
+}
+
+export function rulesForImage({ width, height, data }) {
   const rows = [];
   const cols = [];
 
-  for (let y = 0; y < h; ++ y) {
-    if (image[y].length !== w) {
-      throw new Error('Malformed image in game data');
-    }
+  for (let y = 0; y < height; ++ y) {
     const rule = [];
     let start = -1;
-    for (let x = 0; x < w; ++ x) {
-      if (isCellOn(image[y][x])) {
+    for (let x = 0; x < width; ++ x) {
+      if (data[y * width + x]) {
         if (start === -1) {
           start = x;
         }
@@ -28,16 +38,16 @@ function rulesForImage(image) {
       }
     }
     if (start !== -1) {
-      rule.push(w - start);
+      rule.push(width - start);
     }
     rows.push(rule);
   }
 
-  for (let x = 0; x < w; ++ x) {
+  for (let x = 0; x < width; ++ x) {
     const rule = [];
     let start = -1;
-    for (let y = 0; y < h; ++ y) {
-      if (isCellOn(image[y][x])) {
+    for (let y = 0; y < height; ++ y) {
+      if (data[y * width + x]) {
         if (start === -1) {
           start = y;
         }
@@ -47,7 +57,7 @@ function rulesForImage(image) {
       }
     }
     if (start !== -1) {
-      rule.push(h - start);
+      rule.push(height - start);
     }
     cols.push(rule);
   }
@@ -98,20 +108,18 @@ function testRules(rows, cols) {
   }
 }
 
-export function compileGame(input) {
-  let rows;
-  let cols;
-  if (input.rows && input.cols) {
-    rows = input.rows;
-    cols = input.cols;
+export function extractRules({ rows, cols, image }) {
+  if (rows && cols) {
     testRules(rows, cols);
-  } else if (input.image) {
-    const data = rulesForImage(input.image);
-    rows = data.rows;
-    cols = data.cols;
-  } else {
-    throw new Error('No game data found');
+    return { rows, cols };
   }
+  if (image) {
+    return rulesForImage(stringToImage(image));
+  }
+  throw new Error('No game data found');
+}
+
+export function compileGame({ rows, cols }) {
   const w = cols.length;
   const h = rows.length;
 
