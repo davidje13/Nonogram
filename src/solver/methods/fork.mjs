@@ -1,6 +1,8 @@
 import { UNKNOWN, ON, OFF } from '../../constants.mjs';
-import { AmbiguousError, InvalidGameError } from '../errors.mjs';
+import { AmbiguousError, InvalidGameError, StuckError } from '../errors.mjs';
 import { perlRegexp } from './isolated-rules/perl-regexp.mjs';
+
+const IMPACT_USED = { on: 1, off: 1 };
 
 function makeCheck(checker, rules) {
   const auxChecks = rules.map(({ raw, cellIndices }) => ({
@@ -51,7 +53,7 @@ function countUnknown(substate) {
   return count;
 }
 
-function pickGuessSpot(auxChecks, state, sharedState) {
+function pickGuessSpot(auxChecks, state, impacts) {
   let bestI = 0;
   let bestN = -1;
   let bestDir = OFF;
@@ -59,7 +61,11 @@ function pickGuessSpot(auxChecks, state, sharedState) {
   // shallow breadth-first search to find a good candidate location for making a guess
   for (let i = 0; i < state.board.length; ++i) {
     if (state.board[i] === UNKNOWN) {
-      const counts = sharedState.impacts?.get(i) ?? judgeImportance(auxChecks, state, i);
+      let counts = impacts.get(i);
+      if (!counts) {
+        counts = judgeImportance(auxChecks, state, i);
+        impacts.set(i, counts);
+      }
       const n = Math.log(counts.on) + Math.log(counts.off);
       if (n > bestN) {
         bestI = i;
@@ -71,96 +77,136 @@ function pickGuessSpot(auxChecks, state, sharedState) {
   return { i: bestI, dir: bestDir };
 }
 
-export const parallelFork = (checker = perlRegexp) => (rules) => {
-  const { check, auxChecks } = makeCheck(checker, rules);
+function* runParallel(paths, maxDepth, check, resultOut) {
+  const valid = [];
+  const possible = [];
 
-  return function* (state, { solve, sharedState }) {
-    const trial = pickGuessSpot(auxChecks, state, sharedState);
-    //process.stderr.write(`Guessing at position ${trial.i}\n`);
-
-    const state1 = state.clone();
-    const state2 = state.clone();
-    state1.board[trial.i] = ON;
-    state2.board[trial.i] = OFF;
-    const iterator1 = solve(state1);
-    const iterator2 = solve(state2);
-
-    // run both in parallel until one has a conflict (throws an exception)
-    let success1 = false;
-    let success2 = false;
-    while (true) {
-      if (!success1) {
-        try {
-          const sub = iterator1.next();
-          check(state1);
-          yield sub.value;
-          success1 = sub.done;
-        } catch (e) {
-          if (e instanceof InvalidGameError) {
-            state.set(state2);
-            return;
-          } else {
-            throw e;
-          }
-        }
-      }
-      if (!success2) {
-        try {
-          const sub = iterator2.next();
-          check(state2);
-          yield sub.value;
-          success2 = sub.done;
-        } catch (e) {
-          if (e instanceof InvalidGameError) {
-            state.set(state1);
-            return;
-          } else {
-            throw e;
-          }
-        }
-      }
-      if (success1 && success2) {
-        throw new AmbiguousError([state1.board, state2.board]);
-      }
-    }
-  };
-};
-
-export const synchronousFork = (checker = perlRegexp) => (rules) => {
-  const { check, auxChecks } = makeCheck(checker, rules);
-
-  return function* (state, { solve, sharedState }) {
-    const trial = pickGuessSpot(auxChecks, state, sharedState);
-    //process.stderr.write(`Guessing at position ${trial.i}\n`);
-
-    const states = [state.clone(), state.clone()];
-    const values = trial.dir === ON ? [ON, OFF] : [OFF, ON];
-    let success = null;
-    let remaining = states.length;
-    for (let i = 0; i < states.length; ++i) {
-      const subState = states[i];
-      subState.board[trial.i] = values[i];
-      if (remaining === 1 && success === null) {
-        success = subState;
-        break;
-      }
-      const iterator = solve(subState);
+  // run both in parallel until one has a conflict (throws an exception)
+  for (let n = 0; n < maxDepth; ++n) {
+    for (const path of paths) {
+      let done = false;
       try {
-        while (!iterator.next().done) {
-          check(subState);
+        const sub = path.iterator.next();
+        check(path.state);
+        if (sub.done) {
+          valid.push(path.state);
+          done = true;
         }
-        if (success !== null) {
-          throw new AmbiguousError([success.board, subState.board]);
-        }
-        success = subState;
+        yield sub.value;
       } catch (e) {
-        if (e instanceof InvalidGameError) {
-          --remaining;
-        } else {
+        if (e instanceof StuckError) {
+          possible.push(path.state);
+        } else if (!(e instanceof InvalidGameError)) {
           throw e;
         }
+        done = true;
+      }
+      if (done) {
+        paths.splice(paths.indexOf(path), 1);
+        if (paths.length === 1 && valid.length + possible.length === 0) {
+          possible.push(paths.pop().state);
+        }
+        if (paths.length) {
+          break;
+        }
+        if (valid.length > 1) {
+          throw new AmbiguousError(valid.map((v) => v.board));
+        }
+        const outcome = [...valid, ...possible];
+        if (outcome.length === 1) {
+          resultOut.state = outcome[0];
+        }
+        return;
       }
     }
-    state.set(success);
+  }
+}
+
+function* runSynchronous(paths, maxDepth, check, resultOut) {
+  let stuck = false;
+  let result = null;
+  let remaining = paths.length;
+  for (const path of paths) {
+    if (remaining === 1 && result === null) {
+      resultOut.state = path.state;
+      return;
+    }
+    try {
+      for (let n = 0; ; ++n) {
+        const sub = path.iterator.next();
+        check(path.state);
+        if (sub.done) {
+          if (stuck) {
+            return; // cannot say for sure if one path is the correct one
+          } else if (result !== null) {
+            throw new AmbiguousError([result.board, path.state.board]);
+          } else {
+            result = path.state;
+            break;
+          }
+        }
+        if (n >= maxDepth) {
+          throw new StuckError();
+        }
+        yield;
+      }
+    } catch (e) {
+      if (e instanceof InvalidGameError) {
+        --remaining;
+      } else if (e instanceof StuckError) {
+        if (result !== null) {
+          return; // cannot say for sure if one path is the correct one
+        }
+        result = path.state;
+        stuck = true;
+      } else {
+        throw e;
+      }
+    }
+  }
+  resultOut.state = result;
+}
+
+export const fork = ({
+  parallel = true,
+  checker = perlRegexp,
+  maxDepth = Number.POSITIVE_INFINITY,
+  fastSolve = true,
+} = {}) => (rules) => {
+  const { check, auxChecks } = makeCheck(checker, rules);
+  const fn = parallel ? runParallel : runSynchronous;
+
+  return function* (state, { solve, sharedState }) {
+    let impacts = sharedState.get('impacts');
+    if (!impacts) {
+      impacts = new Map();
+      sharedState.set('impacts', impacts);
+    }
+    const trial = pickGuessSpot(auxChecks, state, impacts);
+    impacts.set(trial.i, IMPACT_USED);
+    //process.stderr.write(`Guessing at position ${trial.i}\n`);
+
+    const paths = [
+      { state: state.clone(), value: ON, iterator: null },
+      { state: state.clone(), value: OFF, iterator: null },
+    ];
+    if (trial.dir === OFF) {
+      paths.reverse();
+    }
+    for (const path of paths) {
+      path.state.board[trial.i] = path.value;
+      path.iterator = solve(path.state);
+    }
+
+    const result = { state: null };
+    yield* fn(paths, maxDepth, check, result);
+
+    if (result.state) {
+      if (fastSolve) {
+        state.set(result.state);
+      } else {
+        state.setCell(trial.i, result.state.board[trial.i]);
+      }
+    }
   };
 };

@@ -91,21 +91,28 @@ function resolveImplications(implications, cell, value, depth) {
   return resolved;
 }
 
-export const implications = (implicationFinder = perlRegexp, depth = 10) => (rules) => {
+export const implications = ({
+  implicationFinder = perlRegexp,
+  maxDepth = Number.POSITIVE_INFINITY,
+} = {}) => (rules) => {
   const auxRules = rules.map(({ raw, cellIndices }) => ({
     cellIndices,
     solve: implicationFinder(raw),
   }));
 
   return function* (state, { sharedState }) {
-    const implications = buildImplications(auxRules, state);
+    let implications = sharedState.get(implicationFinder);
+    if (!implications) {
+      implications = buildImplications(auxRules, state);
+      sharedState.set(implicationFinder, implications);
+    }
     const impacts = new Map();
     for (let cell = 0; cell < state.board.length; ++cell) {
       if (state.board[cell] !== UNKNOWN) {
         continue;
       }
-      const onImp = resolveImplications(implications, cell, ON, depth);
-      const offImp = resolveImplications(implications, cell, OFF, depth);
+      const onImp = resolveImplications(implications, cell, ON, maxDepth);
+      const offImp = resolveImplications(implications, cell, OFF, maxDepth);
       if (onImp !== null && offImp !== null) {
         for (const p of onImp) {
           if (offImp.has(p)) {
@@ -123,6 +130,6 @@ export const implications = (implicationFinder = perlRegexp, depth = 10) => (rul
         throw new InvalidGameError(`cell at index ${cell} can be neither on nor off`);
       }
     }
-    sharedState.impacts = impacts;
+    sharedState.set('impacts', impacts);
   };
 };

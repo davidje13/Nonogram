@@ -10,7 +10,7 @@ import { toShortByImage, toShortByRules } from './export.mjs';
 import { solver } from './solver/solver.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from './solver/errors.mjs';
 import { implications } from './solver/methods/implications.mjs';
-import { parallelFork, synchronousFork } from './solver/methods/fork.mjs';
+import { fork } from './solver/methods/fork.mjs';
 import { isolatedRules } from './solver/methods/isolated-rules.mjs';
 import { trivial } from './solver/methods/isolated-rules/trivial.mjs';
 import { regExp } from './solver/methods/isolated-rules/regexp.mjs';
@@ -19,15 +19,19 @@ import { caps } from './solver/methods/isolated-rules/caps.mjs';
 
 const fastSolver = solver(
   isolatedRules(perlRegexp),
-  implications(perlRegexp, 10),
-  synchronousFork(perlRegexp),
+  implications(),
+  fork({ parallel: false }),
 );
 
 //const difficultyJudgeSolver = solver(
-//  isolatedRules(trivial, caps, regExp, perlRegexp),
-//  implications(perlRegexp, 2),
-//  implications(perlRegexp, 10),
-//  fork(perlRegexp),
+//  isolatedRules(trivial),
+//  isolatedRules(caps),
+//  isolatedRules(regExp),
+//  isolatedRules(perlRegexp),
+//  implications({ maxDepth: 2 }),
+//  implications(),
+//  fork({ parallel: false, maxDepth: 5, fastSolve: false }),
+//  fork({ parallel: false, fastSolve: false }),
 //);
 
 function run(gameFile) {

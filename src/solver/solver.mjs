@@ -7,7 +7,7 @@ export const solver = (...methods) => (rules) => {
 
   function* solve(state) {
     steps: while (state.board.includes(UNKNOWN)) {
-      const ctx = { solve, sharedState: {} };
+      const ctx = { solve, sharedState: new Map() };
       for (const method of auxMethods) {
         state.changed = false;
         yield* method(state, ctx);
