@@ -3,9 +3,9 @@
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
-import { drawGameState } from './draw.mjs';
+import { drawGameBoard } from './draw.mjs';
 import { compileGame } from './game.mjs';
-import { makeState } from './state.mjs';
+import { makeBoard } from './board.mjs';
 import { toShortByImage, toShortByRules } from './export.mjs';
 import { solver } from './solver/solver.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from './solver/errors.mjs';
@@ -36,38 +36,38 @@ const fastSolver = solver(
 
 function run(gameFile) {
   const game = compileGame(JSON.parse(readFileSync(gameFile)));
-  const state = makeState(game);
+  const board = makeBoard(game);
 
   const tmBegin = performance.now();
   let tmEnd;
   try {
-    fastSolver(game.rules).solve(state);
+    fastSolver(game.rules).solve(board);
     tmEnd = performance.now();
-    drawGameState(game, state);
+    drawGameBoard(game, board);
   } catch (e) {
     tmEnd = performance.now();
     if (e instanceof AmbiguousError) {
       process.stderr.write('Multiple solutions found. Examples (there may be more):\n\n');
-      for (const exampleState of e.exampleStates) {
-        drawGameState(game, exampleState);
+      for (const exampleBoard of e.exampleBoards) {
+        drawGameBoard(game, exampleBoard);
         process.stderr.write('\n');
       }
       process.stderr.write('Solution before uncertainty:\n\n');
-      drawGameState(game, state);
+      drawGameBoard(game, board);
     } else if (e instanceof StuckError) {
       process.stderr.write('Stuck while solving with currently configured methods:\n\n');
-      drawGameState(game, state);
+      drawGameBoard(game, board);
     } else if (e instanceof InvalidGameError) {
       process.stderr.write(`Game does not have a well-defined solution: ${e.message}\n`);
       process.stderr.write('Progress: (other possible partial solutions exist)\n\n');
-      drawGameState(game, state);
+      drawGameBoard(game, board);
     } else {
       throw e;
     }
   }
 
   process.stdout.write(`\n`);
-  process.stdout.write(`Short image: ${toShortByImage(game, state)}\n`);
+  process.stdout.write(`Short image: ${toShortByImage(game, board)}\n`);
   process.stdout.write(`Short rules: ${toShortByRules(game)}\n`);
   process.stdout.write(`Solving time: ${(tmEnd - tmBegin).toFixed(1)}ms\n`);
 }

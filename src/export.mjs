@@ -18,8 +18,8 @@ class BitEncoder {
     return toBase64Url(Buffer.from(this.bytes).toString('base64'));
   }
 
-  writeBit(state) {
-    if (state) {
+  writeBit(value) {
+    if (value) {
       this.cur |= (0x80 >> (this.bit & 7));
     }
     if (!((++ this.bit) & 0x7)) {
@@ -83,13 +83,13 @@ export function toJSON(game) {
   });
 }
 
-export function toShortByImage({ w, h }, state) {
+export function toShortByImage({ w, h }, board) {
   const encoder = new BitEncoder();
   encoder.writeUnbounded(w);
   encoder.writeUnbounded(h);
   for (let y = 0; y < h; ++ y) {
     for (let x = 0; x < w; ++ x) {
-      const c = state[y * w + x];
+      const c = board[y * w + x];
       if (c === UNKNOWN) {
         return null;
       }

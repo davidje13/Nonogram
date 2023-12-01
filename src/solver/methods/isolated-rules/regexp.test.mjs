@@ -1,11 +1,11 @@
-import { stateFromString, stateToString1D } from '../../../debug.mjs';
+import { boardLineFromString, boardLineToString } from '../../test-utils/conversion.mjs';
 import { regExp } from './regexp.mjs';
 
 describe('regExp', () => {
   it('solves most types of single line', ({ rule, input, expected }) => {
-    const state = stateFromString(input);
-    regExp(rule)(state);
-    expect(stateToString1D(state)).equals(expected);
+    const boardLine = boardLineFromString(input);
+    regExp(rule)(boardLine);
+    expect(boardLineToString(boardLine)).equals(expected);
   }, { parameters: [
     { rule: [], input: '----', expected: '    ' },
     { rule: [4], input: '----', expected: '####' },

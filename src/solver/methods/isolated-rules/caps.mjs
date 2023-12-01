@@ -1,15 +1,15 @@
 import { OFF, ON, UNKNOWN } from '../../../constants.mjs';
 import { InvalidGameError } from '../../errors.mjs';
 
-function extractBlocks(substate) {
+function extractBlocks(boardLine) {
   const found = [];
   let started = -1;
   let anchorL = false;
-  for (let i = 0; i < substate.length; ++ i) {
-    const v = substate[i];
+  for (let i = 0; i < boardLine.length; ++ i) {
+    const v = boardLine[i];
     if (v === ON) {
       if (started === -1) {
-        anchorL = (i === 0) || (substate[i - 1] === OFF);
+        anchorL = (i === 0) || (boardLine[i - 1] === OFF);
         started = i;
       }
     } else if (started !== -1) {
@@ -20,7 +20,7 @@ function extractBlocks(substate) {
     }
   }
   if (started !== -1) {
-    const len = substate.length - started;
+    const len = boardLine.length - started;
     const anchorR = true;
     found.push({ pos: started, len, capped: anchorL && anchorR });
   }
@@ -34,8 +34,8 @@ function extractBlocks(substate) {
  * It is unable to solve any games alone, but the situations it applies to are obvious
  * to a human and represent a low difficulty.
  */
-export const caps = (rule) => (substate) => {
-  const found = extractBlocks(substate);
+export const caps = (rule) => (boardLine) => {
+  const found = extractBlocks(boardLine);
   const remaining = [...rule];
 
   remaining.sort((a, b) => (a - b)); // sort smallest first
@@ -59,10 +59,10 @@ export const caps = (rule) => (substate) => {
       const l = block.pos - 1;
       const r = block.pos + block.len;
       if (l >= 0) {
-        substate[l] = OFF;
+        boardLine[l] = OFF;
       }
-      if (r < substate.length) {
-        substate[r] = OFF;
+      if (r < boardLine.length) {
+        boardLine[r] = OFF;
       }
       const pos = remaining.indexOf(block.len);
       if (pos === -1) {
@@ -74,9 +74,9 @@ export const caps = (rule) => (substate) => {
 
   if (!remaining.length) {
     // found everything; all unknown items must be blank
-    for (let i = 0; i < substate.length; ++i) {
-      if (substate[i] === UNKNOWN) {
-        substate[i] = OFF;
+    for (let i = 0; i < boardLine.length; ++i) {
+      if (boardLine[i] === UNKNOWN) {
+        boardLine[i] = OFF;
       }
     }
   }

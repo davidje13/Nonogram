@@ -6,15 +6,15 @@ const IMPACT_USED = { on: 1, off: 1 };
 
 function makeCheck(checker, rules) {
   const auxChecks = rules.map(({ raw, cellIndices }) => ({
-    substate: new Uint8Array(cellIndices.length),
+    boardLine: new Uint8Array(cellIndices.length),
     cellIndices,
     check: checker(raw),
   }));
 
   const check = (state) => {
     for (const auxCheck of auxChecks) {
-      state.readSubstate(auxCheck.substate, auxCheck.cellIndices);
-      auxCheck.check(auxCheck.substate);
+      state.readBoardLine(auxCheck.boardLine, auxCheck.cellIndices);
+      auxCheck.check(auxCheck.boardLine);
     }
   };
 
@@ -24,28 +24,28 @@ function makeCheck(checker, rules) {
 function judgeImportance(auxChecks, state, position) {
   let solvedOn = 0;
   let solvedOff = 0;
-  for (const { substate, cellIndices, check } of auxChecks) {
+  for (const { boardLine, cellIndices, check } of auxChecks) {
     const rulePos = cellIndices.indexOf(position);
     if (rulePos === -1) {
       continue;
     }
-    state.readSubstate(substate, cellIndices);
-    const initialUnknown = countUnknown(substate);
-    const substateOn = substate;
-    const substateOff = new Uint8Array(substate);
-    substateOn[rulePos] = ON;
-    substateOff[rulePos] = OFF;
-    check(substateOn);
-    check(substateOff);
-    solvedOn += initialUnknown - countUnknown(substateOn);
-    solvedOff += initialUnknown - countUnknown(substateOff);
+    state.readBoardLine(boardLine, cellIndices);
+    const initialUnknown = countUnknown(boardLine);
+    const boardLineOn = boardLine;
+    const boardLineOff = new Uint8Array(boardLine);
+    boardLineOn[rulePos] = ON;
+    boardLineOff[rulePos] = OFF;
+    check(boardLineOn);
+    check(boardLineOff);
+    solvedOn += initialUnknown - countUnknown(boardLineOn);
+    solvedOff += initialUnknown - countUnknown(boardLineOff);
   }
   return { on: solvedOn, off: solvedOff };
 }
 
-function countUnknown(substate) {
+function countUnknown(boardLine) {
   let count = 0;
-  for (const v of substate) {
+  for (const v of boardLine) {
     if (v === UNKNOWN) {
       ++count;
     }

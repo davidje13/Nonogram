@@ -60,11 +60,11 @@ export const perlRegexp = (rule) => {
   parts.push(END);
   const { first, end } = buildPartGraph(parts);
 
-  return (substate) => {
+  return (boardLine) => {
     let nextStates = new Map();
     addMulti(nextStates, first.next, null);
-    for (let i = 0; i < substate.length; ++ i) {
-      const v = substate[i];
+    for (let i = 0; i < boardLine.length; ++ i) {
+      const v = boardLine[i];
       const curStates = nextStates;
       nextStates = new Map();
       curStates.forEach((sources, part) => {
@@ -75,10 +75,10 @@ export const perlRegexp = (rule) => {
     }
     const endStates = nextStates.get(end);
     if (!endStates) {
-      throw new InvalidGameError(`no match for rule ${rule.join('/')} (state: "${[...substate].map((v) => v === ON ? '#' : v === OFF ? ' ' : '-').join('')}")`);
+      throw new InvalidGameError(`no match for rule ${rule.join('/')} (line: "${[...boardLine].map((v) => v === ON ? '#' : v === OFF ? ' ' : '-').join('')}")`);
     }
     let nextSources = new Set(endStates);
-    for (let i = substate.length; (i --) > 0; ) {
+    for (let i = boardLine.length; (i --) > 0; ) {
       const possible = new Set();
       const curSources = nextSources;
       nextSources = new Set();
@@ -89,7 +89,7 @@ export const perlRegexp = (rule) => {
         }
       }
       if (possible.size === 1) {
-        substate[i] = possible.values().next().value;
+        boardLine[i] = possible.values().next().value;
       }
     }
   };

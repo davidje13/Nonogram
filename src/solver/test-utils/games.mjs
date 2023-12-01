@@ -1,4 +1,4 @@
-export default [
+export const wellDefinedGames = [
   {
     name: 'empty',
     rows: [[], [], [], [], [], [], [], [], [], []],

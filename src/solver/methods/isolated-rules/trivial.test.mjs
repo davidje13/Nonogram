@@ -1,11 +1,11 @@
-import { stateFromString, stateToString1D } from '../../../debug.mjs';
+import { boardLineFromString, boardLineToString } from '../../test-utils/conversion.mjs';
 import { trivial } from './trivial.mjs';
 
 describe('trivial', () => {
   it('populates line-spanning rules', ({ rule, input, expected }) => {
-    const state = stateFromString(input);
-    trivial(rule)(state);
-    expect(stateToString1D(state)).equals(expected);
+    const boardLine = boardLineFromString(input);
+    trivial(rule)(boardLine);
+    expect(boardLineToString(boardLine)).equals(expected);
   }, { parameters: [
     { rule: [], input: '-----', expected: '     ' },
     { rule: [5], input: '-----', expected: '#####' },

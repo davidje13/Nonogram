@@ -1,16 +1,16 @@
 import { compileGame } from '../../../game.mjs';
-import { makeState } from '../../../state.mjs';
-import { stateFromString, stateToString, stateToString1D } from '../../../debug.mjs';
+import { makeBoard } from '../../../board.mjs';
 import { solver } from '../../solver.mjs';
 import { isolatedRules } from '../isolated-rules.mjs';
-import wellDefinedGames from '../../../test-games/well-defined.mjs';
+import { boardLineFromString, boardToString, boardLineToString } from '../../test-utils/conversion.mjs';
+import { wellDefinedGames } from '../../test-utils/games.mjs';
 import { perlRegexp } from './perl-regexp.mjs';
 
 describe('perlRegexp', () => {
   it('solves as much of a single line as possible', ({ rule, input, expected }) => {
-    const state = stateFromString(input);
-    perlRegexp(rule)(state);
-    expect(stateToString1D(state)).equals(expected);
+    const boardLine = boardLineFromString(input);
+    perlRegexp(rule)(boardLine);
+    expect(boardLineToString(boardLine)).equals(expected);
   }, { parameters: [
     { rule: [], input: '----', expected: '    ' },
     { rule: [4], input: '----', expected: '####' },
@@ -56,9 +56,9 @@ describe('perlRegexp', () => {
   it('solves well defined games', ({ rows, cols, image }) => {
     const perlRegexpSolver = solver(isolatedRules(perlRegexp));
     const game = compileGame({ rows, cols });
-    const state = makeState(game);
+    const board = makeBoard(game);
 
-    perlRegexpSolver(game.rules).solve(state);
-    expect(stateToString(game, state)).equals(image.join('\n'));
+    perlRegexpSolver(game.rules).solve(board);
+    expect(boardToString(game, board)).equals(image.join('\n'));
   }, { parameters: wellDefinedGames });
 });

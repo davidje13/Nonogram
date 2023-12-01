@@ -6,7 +6,7 @@ SYMBOLS[OFF]        = ' ';
 SYMBOLS[ON]         = '#';
 SYMBOLS[UNKNOWABLE] = '?';
 
-export function drawGameState({ w, h, rows, cols }, state) {
+export function drawGameBoard({ w, h, rows, cols }, board) {
   const top = Math.max(1, ...cols.map((rule) => (rule?.length || 1)));
   const left = w;
   const padX = 3;
@@ -17,7 +17,7 @@ export function drawGameState({ w, h, rows, cols }, state) {
   }
   for (let y = 0; y < h; ++ y) {
     for (let x = 0; x < w; ++ x) {
-      const c = SYMBOLS[state[y * w + x]];
+      const c = SYMBOLS[board[y * w + x]];
       for (let i = 0; i < Math.max(1, padX - 1); ++ i) {
         output[top + y][left + x * padX + i] = c;
       }

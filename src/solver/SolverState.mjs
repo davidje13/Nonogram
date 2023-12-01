@@ -42,9 +42,24 @@ export class SolverState {
     return c;
   }
 
-  readSubstate(substate, cellIndices) {
+  readBoardLine(boardLine, cellIndices) {
     for (let n = 0; n < cellIndices.length; ++n) {
-      substate[n] = this.board[cellIndices[n]];
+      boardLine[n] = this.board[cellIndices[n]];
+    }
+  }
+
+  writeBoardLine(boardLine, cellIndices) {
+    for (let n = 0; n < cellIndices.length; ++n) {
+      const index = cellIndices[n];
+      const value = boardLine[n];
+      const old = this.board[index];
+      if (old !== value) {
+        if (old !== UNKNOWN) {
+          throw new InvalidGameError(`contradiction at index ${index}`);
+        }
+        this.board[index] = value;
+        this.changed = true;
+      }
     }
   }
 }

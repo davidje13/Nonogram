@@ -16,18 +16,18 @@ export const trivial = (rule) => {
   if (rule.length) {
     len -= 1;
   }
-  return (substate) => {
+  return (boardLine) => {
     if (len === 0) {
-      substate.fill(OFF);
+      boardLine.fill(OFF);
       return;
     }
-    if (len === substate.length) {
+    if (len === boardLine.length) {
       let pos = 0;
       for (const v of rule) {
         for (let i = 0; i < v; ++ i) {
-          substate[pos++] = ON;
+          boardLine[pos++] = ON;
         }
-        substate[pos++] = OFF;
+        boardLine[pos++] = OFF;
       }
       return;
     }

@@ -12,7 +12,7 @@ function buildImplications(auxRules, state) {
   const cacheMap = state.getCache(IMPLICATIONS_CACHE);
   for (const auxRule of auxRules) {
     const initial = new Uint8Array(auxRule.cellIndices.length);
-    state.readSubstate(initial, auxRule.cellIndices);
+    state.readBoardLine(initial, auxRule.cellIndices);
     let cached = cacheMap.get(auxRule);
     let cacheMatch = Boolean(cached) && cached.state.length === initial.length;
     let unknownCount = 0;
@@ -31,30 +31,30 @@ function buildImplications(auxRules, state) {
           continue;
         }
 
-        const substateOn = new Uint8Array(initial);
-        const substateOff = new Uint8Array(initial);
-        substateOn[i] = ON;
-        substateOff[i] = OFF;
+        const boardLineOn = new Uint8Array(initial);
+        const boardLineOff = new Uint8Array(initial);
+        boardLineOn[i] = ON;
+        boardLineOff[i] = OFF;
         try {
-          auxRule.solve(substateOn);
+          auxRule.solve(boardLineOn);
         } catch (e) {
-          substateOn[i] = OFF; // set up a contradiction as this state is invalid
+          boardLineOn[i] = OFF; // set up a contradiction as this state is invalid
         }
         try {
-          auxRule.solve(substateOff);
+          auxRule.solve(boardLineOff);
         } catch (e) {
-          substateOff[i] = ON; // set up a contradiction as this state is invalid
+          boardLineOff[i] = ON; // set up a contradiction as this state is invalid
         }
 
         const impOff = [];
         const impOn = [];
         for (let j = 0; j < initial.length; ++j) {
           if (initial[j] === UNKNOWN) {
-            if (substateOn[j] !== UNKNOWN) {
-              impOn.push(auxRule.cellIndices[j] * 2 + (substateOn[j] === ON ? 1 : 0));
+            if (boardLineOn[j] !== UNKNOWN) {
+              impOn.push(auxRule.cellIndices[j] * 2 + (boardLineOn[j] === ON ? 1 : 0));
             }
-            if (substateOff[j] !== UNKNOWN) {
-              impOff.push(auxRule.cellIndices[j] * 2 + (substateOff[j] === ON ? 1 : 0));
+            if (boardLineOff[j] !== UNKNOWN) {
+              impOff.push(auxRule.cellIndices[j] * 2 + (boardLineOff[j] === ON ? 1 : 0));
             }
           }
         }

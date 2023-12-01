@@ -27,8 +27,8 @@ export const regExp = (rule) => {
   const regR = new RegExp('^' + parts.join('') + '$');
   const count = parts.length;
 
-  return (substate) => {
-    const symbols = Array.from(substate).map((v) => SYMBOLS[v]);
+  return (boardLine) => {
+    const symbols = Array.from(boardLine).map((v) => SYMBOLS[v]);
     const targetF = symbols.join('');
     symbols.reverse();
     const targetR = symbols.join('');
@@ -47,7 +47,7 @@ export const regExp = (rule) => {
       const endR = pR + lenR;
       const v = (i & 1) ? ON : OFF;
       for (let i = Math.max(pF, pR); i < Math.min(endF, endR); ++ i) {
-        substate[i] = v;
+        boardLine[i] = v;
       }
       pF = endF;
       pR = endR;
