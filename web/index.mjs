@@ -1,24 +1,22 @@
 import { UNKNOWN } from '../src/constants.mjs';
 import { compileGame, rulesForImage } from '../src/game.mjs';
-import { makeBoard } from '../src/board.mjs';
 import { solver } from '../src/solver/solver.mjs';
-import { AmbiguousError, InvalidGameError } from '../src/solver/errors.mjs';
 import { implications } from '../src/solver/methods/implications.mjs';
 import { fork } from '../src/solver/methods/fork.mjs';
 import { isolatedRules } from '../src/solver/methods/isolated-rules.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
+import { AmbiguousError } from '../src/solver/errors.mjs';
+import { LiveSolver } from '../src/LiveSolver.mjs';
 
 const root = document.createElement('div');
 document.body.append(root);
 
+const info = document.createElement('div');
+const definition = document.createElement('div');
+
 // TODO: customisable size
 const w = 20;
 const h = 20;
-
-const board = new Uint8Array(w * h);
-board.fill(0);
-
-const info = document.createElement('div');
 
 const fastSolver = solver(
   isolatedRules(perlRegexp),
@@ -26,54 +24,40 @@ const fastSolver = solver(
   fork({ parallel: false }),
 );
 
-let rules = null;
-let game = null;
-let solveBoard = null;
-let iterator = null;
-let iterateFrame = null;
-
+const board = new Uint8Array(w * h).fill(0);
 const boxes = [];
+const liveSolver = new LiveSolver(fastSolver, {
+  nextFrameFn: (fn) => requestAnimationFrame(fn),
+});
 
-function onChange() {
+liveSolver.addEventListener('begin', () => {
   info.textContent = 'Checking game\u2026';
   for (const box of boxes) {
     box.classList.remove('ambiguous');
   }
-  rules = rulesForImage({ width: w, height: h, data: board });
-  game = compileGame(rules);
-  solveBoard = makeBoard(game);
-  iterator = fastSolver(game.rules).solveSteps(solveBoard);
-  if (!iterateFrame) {
-    iterate();
-  }
-}
+});
 
-function iterate() {
-  const timeout = Date.now() + 20;
-  try {
-    while (!iterator.next().done) {
-      if (Date.now() >= timeout) {
-        iterateFrame = requestAnimationFrame(iterate);
-        return;
-      }
-    }
+liveSolver.addEventListener('complete', ({ detail }) => {
+  if (!detail.error) {
     info.textContent = 'Game is valid.';
-    iterateFrame = null;
-  } catch (e) {
-    iterateFrame = null;
-    if (e instanceof AmbiguousError) {
-      for (let i = 0; i < solveBoard.length; ++i) {
-        if (solveBoard[i] === UNKNOWN) {
-          boxes[i].classList.add('ambiguous');
-        }
+  } else if (detail.error instanceof AmbiguousError) {
+    for (let i = 0; i < detail.board.length; ++i) {
+      if (detail.board[i] === UNKNOWN) {
+        boxes[i].classList.add('ambiguous');
       }
-      info.textContent = 'Game is ambiguous.';
-    } else if (e instanceof InvalidGameError) {
-      info.textContent = 'Game is invalid.';
-    } else {
-      info.textContent = 'Error checking game.';
     }
+    info.textContent = 'Game is ambiguous.';
+  } else {
+    console.error(detail.error);
+    info.textContent = 'Error checking game.';
   }
+});
+
+
+function onChange() {
+  const rules = rulesForImage({ width: w, height: h, data: board });
+  definition.textContent = JSON.stringify(rules);
+  liveSolver.update(compileGame(rules));
 }
 
 for (let y = 0; y < h; ++y) {
@@ -90,5 +74,5 @@ for (let y = 0; y < h; ++y) {
   }
   root.append(document.createElement('br'));
 }
-root.append(info);
+root.append(info, definition);
 onChange();
