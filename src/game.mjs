@@ -1,3 +1,5 @@
+import { OFF, ON } from './constants.mjs';
+
 function isCellOn(cell) {
   return cell && cell !== ' ';
 }
@@ -14,7 +16,7 @@ function stringToImage(str) {
       throw new Error('Malformed image in game data');
     }
     for (let x = 0; x < width; ++x) {
-      data[y * width + x] = isCellOn(str[y][x]);
+      data[y * width + x] = isCellOn(str[y][x]) ? ON : OFF;
     }
   }
   return { width, height, data };
@@ -28,7 +30,7 @@ export function rulesForImage({ width, height, data }) {
     const rule = [];
     let start = -1;
     for (let x = 0; x < width; ++ x) {
-      if (data[y * width + x]) {
+      if (data[y * width + x] === ON) {
         if (start === -1) {
           start = x;
         }
@@ -47,7 +49,7 @@ export function rulesForImage({ width, height, data }) {
     const rule = [];
     let start = -1;
     for (let y = 0; y < height; ++ y) {
-      if (data[y * width + x]) {
+      if (data[y * width + x] === ON) {
         if (start === -1) {
           start = y;
         }

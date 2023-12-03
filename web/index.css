@@ -1,7 +1,0 @@
-input[type="checkbox"] {
-}
-input[type="checkbox"]:checked {
-}
-input[type="checkbox"].ambiguous {
-  box-shadow: 0 0 0 2px red;
-}
