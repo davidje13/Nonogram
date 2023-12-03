@@ -1,10 +1,5 @@
 import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
 import { compileGame, rulesForImage } from '../src/game.mjs';
-import { solver } from '../src/solver/solver.mjs';
-import { implications } from '../src/solver/methods/implications.mjs';
-import { fork } from '../src/solver/methods/fork.mjs';
-import { isolatedRules } from '../src/solver/methods/isolated-rules.mjs';
-import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
 import { LiveSolver } from '../src/LiveSolver.mjs';
 import { GridView } from './GridView.mjs';
@@ -15,15 +10,7 @@ document.body.append(root);
 const info = document.createElement('div');
 const definition = document.createElement('pre');
 
-const fastSolver = solver(
-  isolatedRules(perlRegexp),
-  implications(),
-  fork({ parallel: false }),
-);
-
-const liveSolver = new LiveSolver(fastSolver, {
-  nextFrameFn: (fn) => requestAnimationFrame(fn),
-});
+const liveSolver = new LiveSolver('/src/live-solver-worker.mjs');
 
 const editor = new GridView({
   width: 20,
