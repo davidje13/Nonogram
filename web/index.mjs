@@ -3,6 +3,7 @@ import { compileGame, rulesForImage } from '../src/game.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
 import { LiveSolver } from '../src/LiveSolver.mjs';
 import { GridView } from './GridView.mjs';
+import { GamePlayer } from './GamePlayer.mjs';
 
 const root = document.createElement('div');
 document.body.append(root);
@@ -13,8 +14,8 @@ const definition = document.createElement('pre');
 const liveSolver = new LiveSolver('/src/live-solver-worker.mjs');
 
 const editor = new GridView({
-  width: 20,
-  height: 20,
+  width: 5,
+  height: 5,
   cellWidth: 23,
   cellHeight: 23,
   fill: OFF,
@@ -44,6 +45,7 @@ liveSolver.addEventListener('complete', ({ detail }) => {
 
 editor.addEventListener('change', ({ detail }) => {
   const rules = rulesForImage({ width: detail.width, height: detail.height, data: detail.values });
+  player.setRules(rules);
   definition.textContent = JSON.stringify(rules);
   liveSolver.update(compileGame(rules));
 });
@@ -58,6 +60,7 @@ function makeButton(text, fn) {
 
 const options = document.createElement('div');
 options.append(
+  makeButton('clear', () => editor.fill(OFF)),
   makeButton('grow right', () => editor.resize({ width: editor.getSize().width + 1, fill: OFF })),
   makeButton('grow bottom', () => editor.resize({ height: editor.getSize().height + 1, fill: OFF })),
   makeButton('grow left', () => editor.resize({ width: editor.getSize().width + 1, dx: 1, fill: OFF })),
@@ -69,12 +72,5 @@ options.append(
 );
 root.append(editor.canvas, options, info, definition);
 
-//const display = new GridView({
-//  width: 20, // TODO: customisable size
-//  height: 20,
-//  cellWidth: 15,
-//  cellHeight: 15,
-//  fill: UNKNOWN,
-//  getChange: (v, alt) => alt ? (v === OFF ? UNKNOWN : OFF) : (v === OFF ? null : v === ON ? UNKNOWN : ON),
-//});
-//root.append(display.canvas);
+const player = new GamePlayer({ cellSize: 23, border: 1 });
+root.append(player.container);

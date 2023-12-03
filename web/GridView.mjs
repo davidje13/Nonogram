@@ -1,7 +1,7 @@
 import { UNKNOWN, ON, OFF } from '../src/constants.mjs';
 
 export class GridView extends EventTarget {
-  constructor({ width, height, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
+  constructor({ width = 0, height = 0, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
     super();
     this.w = 0;
     this.h = 0;
@@ -23,7 +23,7 @@ export class GridView extends EventTarget {
     this._mm = this._mm.bind(this);
     this._mu = this._mu.bind(this);
 
-    this.canvas.addEventListener('mousedown', this._md, { passive: true });
+    this.canvas.addEventListener('mousedown', this._md);
     this.canvas.addEventListener('contextmenu', this._prevent);
   }
 
@@ -49,6 +49,7 @@ export class GridView extends EventTarget {
   }
 
   _md(e) {
+    e.preventDefault();
     const c = this._getCell(e);
     if (!c) {
       return;
@@ -78,6 +79,13 @@ export class GridView extends EventTarget {
 
   getSize() {
     return { width: this.w, height: this.h };
+  }
+
+  fill(fill = UNKNOWN) {
+    this.values.fill(fill);
+    this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
+    this.dirty = true;
+    Promise.resolve().then(() => this.draw());
   }
 
   setCell(x, y, value) {
