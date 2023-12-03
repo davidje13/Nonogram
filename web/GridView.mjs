@@ -1,28 +1,22 @@
 import { UNKNOWN, ON, OFF } from '../src/constants.mjs';
 
 export class GridView extends EventTarget {
-  constructor({ width, height, cellWidth, cellHeight, initial = UNKNOWN, getChange = () => null }) {
+  constructor({ width, height, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
     super();
-    this.w = width;
-    this.h = height;
+    this.w = 0;
+    this.h = 0;
     this.cw = cellWidth;
     this.ch = cellHeight;
     this.getChange = getChange;
     this.border = 1;
-    this.values = new Uint8Array(this.w * this.h).fill(initial);
-    this.marked = new Uint8Array(this.w * this.h).fill(0);
+    this.values = new Uint8Array(0);
+    this.marked = new Uint8Array(0);
 
-    const fullWidth = this.w * (this.cw + this.border) + this.border;
-    const fullHeight = this.h * (this.ch + this.border) + this.border;
     this.canvas = document.createElement('canvas');
-    this.canvas.width = fullWidth;
-    this.canvas.height = fullHeight;
-    this.canvas.style.width = `${fullWidth}px`;
-    this.canvas.style.height = `${fullHeight}px`;
     this.canvas.style.imageRendering = 'pixelated';
     this.ctx = this.canvas.getContext('2d', { alpha: true });
     this.dirty = true;
-    this.draw();
+    this.resize({ width, height, fill });
 
     this.updating = null;
     this._md = this._md.bind(this);
@@ -82,6 +76,10 @@ export class GridView extends EventTarget {
     window.removeEventListener('mouseup', this._mu);
   }
 
+  getSize() {
+    return { width: this.w, height: this.h };
+  }
+
   setCell(x, y, value) {
     const p = y * this.w + x;
     if (this.values[p] !== value) {
@@ -108,6 +106,49 @@ export class GridView extends EventTarget {
       this.dirty = true;
       Promise.resolve().then(() => this.draw());
     }
+  }
+
+  resize({ width = null, height = null, fill = UNKNOWN, dx = 0, dy = 0 }) {
+    const oldW = this.w;
+    const oldH = this.h;
+    const oldValues = this.values;
+    const oldMarked = this.marked;
+    if (width < 0 || height < 0) {
+      throw new Error('invalid size');
+    }
+    this.w = width ?? oldW;
+    this.h = height ?? oldH;
+    this.values = new Uint8Array(this.w * this.h);
+    this.marked = new Uint8Array(this.w * this.h);
+    for (let y = 0; y < this.h; ++y) {
+      const oy = y - dy;
+      if (oy >= 0 && oy < oldH) {
+        for (let x = 0; x < this.w; ++x) {
+          const ox = x - dx;
+          if (ox >= 0 && ox < oldW) {
+            this.values[y * this.w + x] = oldValues[oy * oldW + ox];
+            this.marked[y * this.w + x] = oldMarked[oy * oldW + ox];
+          } else {
+            this.values[y * this.w + x] = fill;
+            this.marked[y * this.w + x] = 0;
+          }
+        }
+      } else {
+        for (let x = 0; x < this.w; ++x) {
+          this.values[y * this.w + x] = fill;
+          this.marked[y * this.w + x] = 0;
+        }
+      }
+    }
+    const fullWidth = this.w * (this.cw + this.border) + this.border;
+    const fullHeight = this.h * (this.ch + this.border) + this.border;
+    this.canvas.width = fullWidth;
+    this.canvas.height = fullHeight;
+    this.canvas.style.width = `${fullWidth}px`;
+    this.canvas.style.height = `${fullHeight}px`;
+    this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
+    this.dirty = true;
+    this.draw();
   }
 
   draw() {

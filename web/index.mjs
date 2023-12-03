@@ -25,18 +25,18 @@ const liveSolver = new LiveSolver(fastSolver, {
   nextFrameFn: (fn) => requestAnimationFrame(fn),
 });
 
-const display = new GridView({
-  width: 20, // TODO: customisable size
+const editor = new GridView({
+  width: 20,
   height: 20,
   cellWidth: 23,
   cellHeight: 23,
-  initial: OFF,
+  fill: OFF,
   getChange: (v, alt) => alt ? null : (v === ON ? OFF : ON),
 });
 
 liveSolver.addEventListener('begin', () => {
   info.textContent = 'Checking game\u2026';
-  display.clearMarked();
+  editor.clearMarked();
 });
 
 liveSolver.addEventListener('complete', ({ detail }) => {
@@ -45,7 +45,7 @@ liveSolver.addEventListener('complete', ({ detail }) => {
   } else if (detail.error instanceof AmbiguousError) {
     for (let i = 0; i < detail.board.length; ++i) {
       if (detail.board[i] === UNKNOWN) {
-        display.setMarked(i, 0, true);
+        editor.setMarked(i, 0, true);
       }
     }
     info.textContent = 'Game is ambiguous.';
@@ -55,20 +55,39 @@ liveSolver.addEventListener('complete', ({ detail }) => {
   }
 });
 
-display.addEventListener('change', ({ detail }) => {
+editor.addEventListener('change', ({ detail }) => {
   const rules = rulesForImage({ width: detail.width, height: detail.height, data: detail.values });
   definition.textContent = JSON.stringify(rules);
   liveSolver.update(compileGame(rules));
 });
 
-root.append(display.canvas, info, definition);
+function makeButton(text, fn) {
+  const btn = document.createElement('button');
+  btn.setAttribute('type', 'button');
+  btn.textContent = text;
+  btn.addEventListener('click', fn);
+  return btn;
+}
 
-//const display2 = new GridView({
+const options = document.createElement('div');
+options.append(
+  makeButton('grow right', () => editor.resize({ width: editor.getSize().width + 1, fill: OFF })),
+  makeButton('grow bottom', () => editor.resize({ height: editor.getSize().height + 1, fill: OFF })),
+  makeButton('grow left', () => editor.resize({ width: editor.getSize().width + 1, dx: 1, fill: OFF })),
+  makeButton('grow top', () => editor.resize({ height: editor.getSize().height + 1, dy: 1, fill: OFF })),
+  makeButton('shrink right', () => editor.resize({ width: editor.getSize().width - 1, fill: OFF })),
+  makeButton('shrink bottom', () => editor.resize({ height: editor.getSize().height - 1, fill: OFF })),
+  makeButton('shrink left', () => editor.resize({ width: editor.getSize().width - 1, dx: -1, fill: OFF })),
+  makeButton('shrink top', () => editor.resize({ height: editor.getSize().height - 1, dy: -1, fill: OFF })),
+);
+root.append(editor.canvas, options, info, definition);
+
+//const display = new GridView({
 //  width: 20, // TODO: customisable size
 //  height: 20,
 //  cellWidth: 15,
 //  cellHeight: 15,
-//  initial: UNKNOWN,
+//  fill: UNKNOWN,
 //  getChange: (v, alt) => alt ? (v === OFF ? UNKNOWN : OFF) : (v === OFF ? null : v === ON ? UNKNOWN : ON),
 //});
-//root.append(display2.canvas);
+//root.append(display.canvas);
