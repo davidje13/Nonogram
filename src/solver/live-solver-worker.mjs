@@ -1,10 +1,10 @@
-import { makeBoard } from './board.mjs';
-import { solver } from './solver/solver.mjs';
-import { implications } from './solver/methods/implications.mjs';
-import { fork } from './solver/methods/fork.mjs';
-import { isolatedRules } from './solver/methods/isolated-rules.mjs';
-import { perlRegexp } from './solver/methods/isolated-rules/perl-regexp.mjs';
-import { setImmediate } from './setImmediate.mjs';
+import { setImmediate } from '../setImmediate.mjs';
+import { UNKNOWN } from '../constants.mjs';
+import { solver } from './solver.mjs';
+import { implications } from './methods/implications.mjs';
+import { fork } from './methods/fork.mjs';
+import { isolatedRules } from './methods/isolated-rules.mjs';
+import { perlRegexp } from './methods/isolated-rules/perl-regexp.mjs';
 
 let activeID = null;
 let board = null;
@@ -19,7 +19,7 @@ const fastSolver = solver(
 
 addEventListener('message', ({ data: { game, id } }) => {
   activeID = id;
-  board = makeBoard(game);
+  board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
   iterator = fastSolver(game.rules).solveSteps(board);
   if (nextStep === null) {
     step();

@@ -1,4 +1,4 @@
-import { UNKNOWN } from '../constants.mjs';
+import { UNKNOWN, UNKNOWABLE } from '../constants.mjs';
 import { StuckError } from './errors.mjs';
 import { SolverState } from './SolverState.mjs';
 
@@ -20,10 +20,23 @@ export const solver = (...methods) => (rules) => {
     }
   };
 
+  const solveSteps = (board) => {
+    const coveredCells = new Set();
+    for (const { cellIndices } of rules) {
+      cellIndices.forEach((i) => coveredCells.add(i));
+    }
+    for (let i = 0; i < board.length; ++i) {
+      if (board[i] === UNKNOWN && !coveredCells.has(i)) {
+        board[i] = UNKNOWABLE;
+      }
+    }
+    return solve(new SolverState(board));
+  };
+
   return {
-    solveSteps: (board) => solve(new SolverState(board)),
+    solveSteps,
     solve: (board) => {
-      for (const _ of solve(new SolverState(board))) {}
+      for (const _ of solveSteps(board)) {}
     },
   };
 };

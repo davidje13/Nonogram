@@ -1,7 +1,9 @@
-import { AmbiguousError } from './solver/errors.mjs';
+import { AmbiguousError } from './errors.mjs';
+
+const workerPath = new URL('./live-solver-worker.mjs', import.meta.url).href;
 
 export class LiveSolver extends EventTarget {
-  constructor(workerPath) {
+  constructor() {
     super();
 
     this.activeID = 0;

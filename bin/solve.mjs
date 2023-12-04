@@ -5,7 +5,7 @@ import { performance } from 'node:perf_hooks';
 
 import { drawGameBoard } from '../src/draw.mjs';
 import { compileGame, extractRules } from '../src/game.mjs';
-import { makeBoard } from '../src/board.mjs';
+import { UNKNOWN } from '../src/constants.mjs';
 import { toShortByImage, toShortByRules } from '../src/export.mjs';
 import { solver } from '../src/solver/solver.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
@@ -37,7 +37,7 @@ const fastSolver = solver(
 function run(gameFile) {
   const rules = extractRules(JSON.parse(readFileSync(gameFile)));
   const game = compileGame(rules);
-  const board = makeBoard(game);
+  const board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
 
   const tmBegin = performance.now();
   let tmEnd;

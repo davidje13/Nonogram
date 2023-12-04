@@ -2,7 +2,7 @@ import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
 import { compileGame, rulesForImage } from '../src/game.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
-import { LiveSolver } from '../src/LiveSolver.mjs';
+import { LiveSolver } from '../src/solver/LiveSolver.mjs';
 import { GridView } from './GridView.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
 
@@ -13,7 +13,7 @@ const info = document.createElement('div');
 const definition = document.createElement('pre');
 definition.className = 'definition';
 
-const liveSolver = new LiveSolver('/src/live-solver-worker.mjs');
+const liveSolver = new LiveSolver();
 
 const editor = new GridView({
   width: 5,
