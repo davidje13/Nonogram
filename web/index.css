@@ -32,6 +32,14 @@
   text-align: center;
 }
 
+.rules .done {
+  color: #AACC80;
+}
+
+.rules .error {
+  color: #CC0066;
+}
+
 .rules.align-top, .rules.align-bottom {
   padding-left: var(--border);
   padding-right: var(--border);
@@ -43,8 +51,8 @@
 
 .rules.align-left, .rules.align-right {
   flex-direction: column;
-  padding-left: var(--border);
-  padding-right: var(--border);
+  padding-top: var(--border);
+  padding-bottom: var(--border);
 }
 
 .rules.align-bottom > div, .rules.align-right > div {

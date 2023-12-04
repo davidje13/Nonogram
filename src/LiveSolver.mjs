@@ -16,7 +16,7 @@ export class LiveSolver extends EventTarget {
     });
   }
 
-  update(game) {
+  solveInBackground(game) {
     ++this.activeID;
     this.dispatchEvent(new CustomEvent('begin'));
     this.worker.postMessage({ game, id: this.activeID });

@@ -92,7 +92,7 @@ export class GridView extends EventTarget {
     const p = y * this.w + x;
     if (this.values[p] !== value) {
       this.values[p] = value;
-      this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
+      this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values, x, y } }));
       this.dirty = true;
       Promise.resolve().then(() => this.draw());
     }

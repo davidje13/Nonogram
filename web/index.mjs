@@ -1,6 +1,7 @@
 import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
 import { compileGame, rulesForImage } from '../src/game.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
+import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { LiveSolver } from '../src/LiveSolver.mjs';
 import { GridView } from './GridView.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
@@ -45,10 +46,14 @@ liveSolver.addEventListener('complete', ({ detail }) => {
 });
 
 editor.addEventListener('change', ({ detail }) => {
-  const rules = rulesForImage({ width: detail.width, height: detail.height, data: detail.values });
+  const rules = rulesForImage({
+    width: detail.width,
+    height: detail.height,
+    data: detail.values,
+  });
   player.setRules(rules);
   definition.textContent = JSON.stringify(rules);
-  liveSolver.update(compileGame(rules));
+  liveSolver.solveInBackground(compileGame(rules));
 });
 
 function makeButton(text, fn) {
@@ -73,5 +78,5 @@ options.append(
   makeButton('shrink top', () => editor.resize({ height: editor.getSize().height - 1, dy: -1, fill: OFF })),
 );
 
-const player = new GamePlayer({ cellSize: 23, border: 1 });
+const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp });
 root.append(options, editor.canvas, info, player.container, definition);
