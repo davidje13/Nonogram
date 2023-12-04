@@ -3,19 +3,19 @@
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
-import { drawGameBoard } from './draw.mjs';
-import { compileGame, extractRules } from './game.mjs';
-import { makeBoard } from './board.mjs';
-import { toShortByImage, toShortByRules } from './export.mjs';
-import { solver } from './solver/solver.mjs';
-import { AmbiguousError, InvalidGameError, StuckError } from './solver/errors.mjs';
-import { implications } from './solver/methods/implications.mjs';
-import { fork } from './solver/methods/fork.mjs';
-import { isolatedRules } from './solver/methods/isolated-rules.mjs';
-import { trivial } from './solver/methods/isolated-rules/trivial.mjs';
-import { regExp } from './solver/methods/isolated-rules/regexp.mjs';
-import { perlRegexp } from './solver/methods/isolated-rules/perl-regexp.mjs';
-import { caps } from './solver/methods/isolated-rules/caps.mjs';
+import { drawGameBoard } from '../src/draw.mjs';
+import { compileGame, extractRules } from '../src/game.mjs';
+import { makeBoard } from '../src/board.mjs';
+import { toShortByImage, toShortByRules } from '../src/export.mjs';
+import { solver } from '../src/solver/solver.mjs';
+import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
+import { implications } from '../src/solver/methods/implications.mjs';
+import { fork } from '../src/solver/methods/fork.mjs';
+import { isolatedRules } from '../src/solver/methods/isolated-rules.mjs';
+import { trivial } from '../src/solver/methods/isolated-rules/trivial.mjs';
+import { regExp } from '../src/solver/methods/isolated-rules/regexp.mjs';
+import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
+import { caps } from '../src/solver/methods/isolated-rules/caps.mjs';
 
 const fastSolver = solver(
   isolatedRules(perlRegexp),
