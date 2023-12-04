@@ -10,6 +10,7 @@ document.body.append(root);
 
 const info = document.createElement('div');
 const definition = document.createElement('pre');
+definition.className = 'definition';
 
 const liveSolver = new LiveSolver('/src/live-solver-worker.mjs');
 
@@ -59,6 +60,7 @@ function makeButton(text, fn) {
 }
 
 const options = document.createElement('div');
+options.className = 'options';
 options.append(
   makeButton('clear', () => editor.fill(OFF)),
   makeButton('grow right', () => editor.resize({ width: editor.getSize().width + 1, fill: OFF })),
@@ -70,7 +72,6 @@ options.append(
   makeButton('shrink left', () => editor.resize({ width: editor.getSize().width - 1, dx: -1, fill: OFF })),
   makeButton('shrink top', () => editor.resize({ height: editor.getSize().height - 1, dy: -1, fill: OFF })),
 );
-root.append(editor.canvas, options, info, definition);
 
 const player = new GamePlayer({ cellSize: 23, border: 1 });
-root.append(player.container);
+root.append(options, editor.canvas, info, player.container, definition);

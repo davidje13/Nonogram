@@ -1,3 +1,16 @@
+.options {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.definition {
+  font: 10px monospace;
+  white-space: pre-wrap;
+  line-break: loose;
+}
+
 .container {
   display: inline-grid;
   grid-template-columns: auto auto;
