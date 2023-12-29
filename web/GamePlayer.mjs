@@ -17,14 +17,22 @@ class RulesView {
     for (const rule of rules) {
       const els = document.createElement('div');
       let total = 0;
-      for (const v of rule.length > 0 ? rule : [0]) {
+      let checker = null;
+      if (rule) {
+        for (const v of rule.length > 0 ? rule : [0]) {
+          const el = document.createElement('div');
+          el.textContent = String(v);
+          els.append(el);
+          total += v;
+        }
+        checker = this._ruleChecker?.(rule);
+      } else {
         const el = document.createElement('div');
-        el.textContent = String(v);
+        el.textContent = '?';
         els.append(el);
-        total += v;
       }
       this.container.append(els);
-      this._rules.push({ dom: els, total, checker: this._ruleChecker?.(rule) });
+      this._rules.push({ dom: els, total, checker });
     }
   }
 
