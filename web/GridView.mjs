@@ -11,10 +11,34 @@ export class GridView extends EventTarget {
     this.border = 1;
     this.values = new Uint8Array(0);
     this.marked = new Uint8Array(0);
+    this.tiles = [];
 
     this.canvas = document.createElement('canvas');
     this.canvas.style.imageRendering = 'pixelated';
-    this.ctx = this.canvas.getContext('2d', { alpha: true });
+    this.canvas.width = this.cw;
+    this.canvas.height = this.ch;
+    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+
+    this.ctx.fillStyle = '#000000';
+    this.ctx.fillRect(0, 0, this.cw, this.ch);
+    this.tiles[ON] = this.ctx.getImageData(0, 0, this.cw, this.ch);
+
+    this.ctx.fillStyle = '#EEEEEE';
+    this.ctx.fillRect(0, 0, this.cw, this.ch);
+    this.tiles[UNKNOWN] = this.ctx.getImageData(0, 0, this.cw, this.ch);
+
+    this.ctx.strokeStyle = '#808080';
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.cw * 0.25, this.ch * 0.25);
+    this.ctx.lineTo(this.cw * 0.75, this.ch * 0.75);
+    this.ctx.moveTo(this.cw * 0.25, this.ch * 0.75);
+    this.ctx.lineTo(this.cw * 0.75, this.ch * 0.25);
+    this.ctx.stroke();
+    this.tiles[OFF] = this.ctx.getImageData(0, 0, this.cw, this.ch);
+
     this.dirty = true;
     this.resize({ width, height, fill });
 
@@ -40,8 +64,8 @@ export class GridView extends EventTarget {
 
   _getCell(e) {
     const bounds = this.canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - bounds.left) / (this.cw + this.border));
-    const y = Math.floor((e.clientY - bounds.top) / (this.ch + this.border));
+    const x = Math.floor((e.clientX - bounds.left - this.border * 0.5) / (this.cw + this.border));
+    const y = Math.floor((e.clientY - bounds.top - this.border * 0.5) / (this.ch + this.border));
     if (x < 0 || x >= this.w || y < 0 || y >= this.h) {
       return null;
     }
@@ -167,38 +191,28 @@ export class GridView extends EventTarget {
 
     const { w, h, cw, ch, border } = this;
 
-    this.ctx.strokeStyle = '#808080';
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.lineWidth = 1;
-
     this.ctx.fillStyle = '#C0C0C0';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     for (let y = 0; y < h; ++y) {
+      const yy = y * (ch + border) + border;
       for (let x = 0; x < w; ++x) {
         const state = this.values[y * w + x];
-        this.ctx.fillStyle = state === ON ? '#000000' : '#EEEEEE';
         const xx = x * (cw + border) + border;
-        const yy = y * (ch + border) + border;
-        this.ctx.fillRect(xx, yy, cw, ch);
-        if (state === OFF) {
-          this.ctx.beginPath();
-          this.ctx.moveTo(xx + cw * 0.25, yy + cw * 0.25);
-          this.ctx.lineTo(xx + cw * 0.75, yy + cw * 0.75);
-          this.ctx.moveTo(xx + cw * 0.25, yy + cw * 0.75);
-          this.ctx.lineTo(xx + cw * 0.75, yy + cw * 0.25);
-          this.ctx.stroke();
-        }
+        this.ctx.putImageData(this.tiles[state], xx, yy);
       }
     }
+
+    const r = border * 0.5;
     this.ctx.strokeStyle = '#FF0000';
-    this.ctx.lineWidth = border + 2;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.lineWidth = Math.max(r * 2, 3);
     for (let y = 0; y < h; ++y) {
+      const yy = y * (ch + border) + border;
       for (let x = 0; x < w; ++x) {
         if (this.marked[y * w + x]) {
-          const xx = x * (cw + border) + 0.5;
-          const yy = y * (ch + border) + 0.5;
-          this.ctx.strokeRect(xx, yy, cw + border, ch + border);
+          const xx = x * (cw + border) + border;
+          this.ctx.strokeRect(xx - r, yy - r, cw + r * 2, ch + r * 2);
         }
       }
     }
