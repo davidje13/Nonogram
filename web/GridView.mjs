@@ -102,8 +102,8 @@ export class GridView extends EventTarget {
     window.removeEventListener('mouseup', this._mu);
   }
 
-  getSize() {
-    return { width: this.w, height: this.h };
+  getGrid() {
+    return { width: this.w, height: this.h, data: this.values };
   }
 
   getTotalCellSize() {
@@ -115,7 +115,7 @@ export class GridView extends EventTarget {
 
   fill(fill = UNKNOWN) {
     this.values.fill(fill);
-    this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
+    this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
     this.dirty = true;
     Promise.resolve().then(() => this.draw());
   }
@@ -124,7 +124,7 @@ export class GridView extends EventTarget {
     const p = y * this.w + x;
     if (this.values[p] !== value) {
       this.values[p] = value;
-      this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values, x, y } }));
+      this.dispatchEvent(new CustomEvent('change', { detail: { ...this.getGrid(), x, y } }));
       this.dirty = true;
       Promise.resolve().then(() => this.draw());
     }
@@ -186,7 +186,7 @@ export class GridView extends EventTarget {
     this.canvas.height = fullHeight;
     this.canvas.style.width = `${fullWidth * this.displayScale}px`;
     this.canvas.style.height = `${fullHeight * this.displayScale}px`;
-    this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
+    this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
     this.dirty = true;
     this.draw();
   }

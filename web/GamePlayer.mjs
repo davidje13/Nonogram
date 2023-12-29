@@ -107,20 +107,20 @@ export class GamePlayer {
     this._rulesL.check(i, board.subarray(i * this._width, (i + 1) * this._width));
   }
 
-  _change({ detail: { values, x, y } }) {
+  _change({ detail: { data, x, y } }) {
     if (x === undefined) {
       for (let i = 0; i < this._width; ++i) {
-        this.checkColumn(i, values);
+        this.checkColumn(i, data);
       }
     } else {
-      this.checkColumn(x, values);
+      this.checkColumn(x, data);
     }
     if (y === undefined) {
       for (let i = 0; i < this._height; ++i) {
-        this.checkRow(i, values);
+        this.checkRow(i, data);
       }
     } else {
-      this.checkRow(y, values);
+      this.checkRow(y, data);
     }
   }
 }

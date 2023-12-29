@@ -46,16 +46,14 @@ liveSolver.addEventListener('complete', ({ detail }) => {
   }
 });
 
-editor.addEventListener('change', ({ detail }) => {
-  const rules = rulesForImage({
-    width: detail.width,
-    height: detail.height,
-    data: detail.values,
-  });
+const editorChanged = () => {
+  const rules = rulesForImage(editor.getGrid());
   player.setRules(rules);
   definition.textContent = JSON.stringify(rules);
   liveSolver.solveInBackground(compileGame(rules));
-});
+};
+
+editor.addEventListener('change', editorChanged);
 
 function makeButton(text, fn) {
   const btn = document.createElement('button');
@@ -72,7 +70,7 @@ options.append(
 );
 
 const editorResizer = new Resizer(editor.canvas, {
-  getCurrentSize: () => editor.getSize(),
+  getCurrentSize: () => editor.getGrid(),
   xScale: editor.getTotalCellSize().width,
   yScale: editor.getTotalCellSize().height,
   xMin: 1,
@@ -89,3 +87,5 @@ editorResizer.addEventListener('change', ({ detail }) => editor.resize({
 
 const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp });
 root.append(options, editorResizer.container, info, player.container, definition);
+
+editorChanged();
