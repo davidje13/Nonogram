@@ -5,6 +5,7 @@ import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs
 import { LiveSolver } from '../src/solver/LiveSolver.mjs';
 import { Resizer } from './Resizer.mjs';
 import { GridView } from './GridView.mjs';
+import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
 
 const root = document.createElement('div');
@@ -46,8 +47,11 @@ liveSolver.addEventListener('complete', ({ detail }) => {
   }
 });
 
+const preview = new GridPreview();
+
 const editorChanged = () => {
   const rules = rulesForImage(editor.getGrid());
+  preview.setRules(rules);
   player.setRules(rules);
   definition.textContent = JSON.stringify(rules);
   liveSolver.solveInBackground(compileGame(rules));
@@ -86,6 +90,6 @@ editorResizer.addEventListener('change', ({ detail }) => editor.resize({
 }));
 
 const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp });
-root.append(options, editorResizer.container, info, player.container, definition);
+root.append(options, editorResizer.container, info, preview.canvas, player.container, definition);
 
 editorChanged();
