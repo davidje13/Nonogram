@@ -9,15 +9,16 @@ export class GridView extends EventTarget {
     this.ch = cellHeight;
     this.getChange = getChange;
     this.border = 1;
+    this.displayScale = 1;
     this.values = new Uint8Array(0);
     this.marked = new Uint8Array(0);
     this.tiles = [];
 
     this.canvas = document.createElement('canvas');
-    this.canvas.style.imageRendering = 'pixelated';
+    this.canvas.className = 'grid-view';
     this.canvas.width = this.cw;
     this.canvas.height = this.ch;
-    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });
 
     this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.cw, this.ch);
@@ -105,6 +106,13 @@ export class GridView extends EventTarget {
     return { width: this.w, height: this.h };
   }
 
+  getTotalCellSize() {
+    return {
+      width: (this.cw + this.border) * this.displayScale,
+      height: (this.ch + this.border) * this.displayScale,
+    };
+  }
+
   fill(fill = UNKNOWN) {
     this.values.fill(fill);
     this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
@@ -176,8 +184,8 @@ export class GridView extends EventTarget {
     const fullHeight = this.h * (this.ch + this.border) + this.border;
     this.canvas.width = fullWidth;
     this.canvas.height = fullHeight;
-    this.canvas.style.width = `${fullWidth}px`;
-    this.canvas.style.height = `${fullHeight}px`;
+    this.canvas.style.width = `${fullWidth * this.displayScale}px`;
+    this.canvas.style.height = `${fullHeight * this.displayScale}px`;
     this.dispatchEvent(new CustomEvent('change', { detail: { width: this.w, height: this.h, values: this.values } }));
     this.dirty = true;
     this.draw();

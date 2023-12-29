@@ -74,7 +74,7 @@ export class GamePlayer {
     });
     this._display.addEventListener('change', this._change.bind(this));
     this.container = document.createElement('div');
-    this.container.className = 'container';
+    this.container.className = 'game-player';
     this.container.append(
       document.createElement('div'),
       this._rulesT.container,

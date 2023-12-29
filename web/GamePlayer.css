@@ -1,0 +1,47 @@
+.game-player {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+}
+
+.game-player .rules, .game-player .rules > div {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--border);
+}
+
+.game-player .rules > div > div {
+  width: var(--cellSize);
+  height: var(--cellSize);
+  font: calc(var(--cellSize) * 0.6) monospace;
+  line-height: var(--cellSize);
+  text-align: center;
+}
+
+.game-player .rules .done {
+  color: #AACC80;
+}
+
+.game-player .rules .error {
+  color: #CC0066;
+}
+
+.game-player .rules.align-top, .game-player .rules.align-bottom {
+  padding-left: var(--border);
+  padding-right: var(--border);
+}
+
+.game-player .rules.align-top > div, .game-player .rules.align-bottom > div {
+  flex-direction: column;
+}
+
+.game-player .rules.align-left, .game-player .rules.align-right {
+  flex-direction: column;
+  padding-top: var(--border);
+  padding-bottom: var(--border);
+}
+
+.game-player .rules.align-bottom > div, .game-player .rules.align-right > div {
+  justify-content: flex-end;
+}

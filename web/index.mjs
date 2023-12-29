@@ -3,6 +3,7 @@ import { compileGame, rulesForImage } from '../src/game.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { LiveSolver } from '../src/solver/LiveSolver.mjs';
+import { Resizer } from './Resizer.mjs';
 import { GridView } from './GridView.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
 
@@ -68,15 +69,23 @@ const options = document.createElement('div');
 options.className = 'options';
 options.append(
   makeButton('clear', () => editor.fill(OFF)),
-  makeButton('grow right', () => editor.resize({ width: editor.getSize().width + 1, fill: OFF })),
-  makeButton('grow bottom', () => editor.resize({ height: editor.getSize().height + 1, fill: OFF })),
-  makeButton('grow left', () => editor.resize({ width: editor.getSize().width + 1, dx: 1, fill: OFF })),
-  makeButton('grow top', () => editor.resize({ height: editor.getSize().height + 1, dy: 1, fill: OFF })),
-  makeButton('shrink right', () => editor.resize({ width: editor.getSize().width - 1, fill: OFF })),
-  makeButton('shrink bottom', () => editor.resize({ height: editor.getSize().height - 1, fill: OFF })),
-  makeButton('shrink left', () => editor.resize({ width: editor.getSize().width - 1, dx: -1, fill: OFF })),
-  makeButton('shrink top', () => editor.resize({ height: editor.getSize().height - 1, dy: -1, fill: OFF })),
 );
 
+const editorResizer = new Resizer(editor.canvas, {
+  getCurrentSize: () => editor.getSize(),
+  xScale: editor.getTotalCellSize().width,
+  yScale: editor.getTotalCellSize().height,
+  xMin: 1,
+  yMin: 1,
+});
+
+editorResizer.addEventListener('change', ({ detail }) => editor.resize({
+  width: detail.width,
+  height: detail.height,
+  dx: detail.dx,
+  dy: detail.dy,
+  fill: OFF,
+}));
+
 const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp });
-root.append(options, editor.canvas, info, player.container, definition);
+root.append(options, editorResizer.container, info, player.container, definition);
