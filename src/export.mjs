@@ -1,5 +1,5 @@
 import { UNKNOWN, ON } from './constants.mjs';
-import { Huffman } from './huffman.mjs';
+import { Huffman, Rational } from './huffman.mjs';
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -87,17 +87,6 @@ class BitEncoder {
     this.writeUnary(block.index);
     this.writeBinary(value - block.start, block.bits);
   }
-
-  writeBounded(value, limit) {
-    if (value < 0 || value > limit) {
-      throw new Error(`value ${value} out of bounds (0 <= value <= ${limit})`);
-    }
-    this.writeBinary(value, bits(limit));
-  }
-
-  writeBoundedBiased(value, limit) {
-    this.writeHuffman(value, getLowBiasedHuffman(limit));
-  }
 }
 
 function findUnboundedBlock(value) {
@@ -124,33 +113,19 @@ function getLowBiasedHuffman(limit) {
     const symbols = [];
     for (let i = 0; i <= limit; ++i) {
       // (i+2)^-2 is closer to the unbounded distribution, but (i+2)^-1 gives better results here experimentally
-      symbols.push({ value: i, p: 1 / (i + 2) });
+      symbols.push({ value: i, p: new Rational(1, i + 2) });
     }
     HUFFMAN_CACHE.set(limit, new Huffman(symbols));
   }
   return HUFFMAN_CACHE.get(limit);
 }
 
-function ceilPoT(v) {
-  let r = v - 1;
-  r |= r >>> 16;
-  r |= r >>> 8;
-  r |= r >>> 4;
-  r |= r >>> 2;
-  r |= r >>> 1;
-  return r + 1;
-}
-
-function bits(v) {
-  return Math.round(Math.log2(ceilPoT(v + 1)));
-}
-
 function encodeRule(encoder, rule, limit) {
   let remaining = rule?.reduce((a, b) => a + b, 0) ?? limit + 1;
-  encoder.writeBounded(remaining, limit + 1);
+  encoder.writeHuffman(remaining, getLowBiasedHuffman(limit + 1));
   const cap = Math.min(rule?.length ?? 0, limit - remaining);
   for (let i = 0; i < cap; ++i) {
-    encoder.writeBoundedBiased(rule[i] - 1, remaining - 1);
+    encoder.writeHuffman(rule[i] - 1, getLowBiasedHuffman(remaining - 1));
     remaining -= rule[i];
   }
 }
