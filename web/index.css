@@ -1,3 +1,7 @@
+body {
+  margin: 10px 10px 100px 210px;
+}
+
 .options {
   display: flex;
   flex-flow: row wrap;
@@ -9,4 +13,45 @@
   font: 10px monospace;
   white-space: pre-wrap;
   line-break: loose;
+}
+
+.game-list {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 200px;
+  overflow-y: auto;
+  border-right: 1px solid #000000;
+  background: #FFFFFF;
+}
+
+.game-list .row {
+  font: 0.8rem sans-serif;
+  line-height: 1.2;
+  color: #000000;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  min-height: 30px;
+  border-bottom: 1px solid #808080;
+}
+
+.game-list .row:hover, .game-list .row:active {
+  color: #000000;
+  text-decoration: none;
+  background: #CCDDFF;
+}
+
+.game-list .row canvas {
+  width: 20px;
+  background: #FFFFFF;
+  border: 1px solid #000000;
+  border-radius: 2px;
+}
+
+.game-list .row .label {
+  flex: 1;
 }
