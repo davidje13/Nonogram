@@ -150,3 +150,15 @@ window.addEventListener('drop', async (e) => {
 root.append(editor, playerTitle, player.container, gameList);
 
 editorChanged();
+
+(async () => {
+  for (const game of ['football', 'hilbert', 'lcd5', 'yin-yang']) {
+      try {
+      const r = await fetch(`games/${game}.json`);
+      const definition = await r.json();
+      addGame(extractRules(definition), definition.name || definition.description || game);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+})();
