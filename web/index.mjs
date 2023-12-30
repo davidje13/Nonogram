@@ -153,7 +153,7 @@ editorChanged();
 
 (async () => {
   for (const game of ['football', 'hilbert', 'lcd5', 'yin-yang']) {
-      try {
+    try {
       const r = await fetch(`games/${game}.json`);
       const definition = await r.json();
       addGame(extractRules(definition), definition.name || definition.description || game);
