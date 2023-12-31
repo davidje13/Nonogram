@@ -1,4 +1,4 @@
-import { UNKNOWN, OFF, ON } from './constants.mjs';
+import { UNKNOWN, OFF, ON, UNKNOWABLE } from './constants.mjs';
 import { BitEncoder } from './data/BitEncoder.mjs';
 import { Huffman, Rational } from './data/huffman.mjs';
 import { RUN, runLengthEncode } from './data/rle.mjs';
@@ -21,10 +21,13 @@ function getLowBiasedHuffman(limit) {
 }
 
 function encodeRule(encoder, rule, limit) {
-  let remaining = rule?.reduce((a, b) => a + b, 0) ?? limit + 1;
-  encoder.writeBits(getLowBiasedHuffman(limit + 1).write(remaining));
-  const cap = Math.min(rule?.length ?? 0, limit - remaining);
-  for (let i = 0; i < cap; ++i) {
+  if (!rule) {
+    throw new Error('Cannot encode partial rules');
+  }
+  const total = rule.reduce((a, b) => a + b, 0);
+  encoder.writeBits(getLowBiasedHuffman(limit).write(total));
+  const cap = Math.min(rule.length, limit - total);
+  for (let i = 0, remaining = total; i < cap; ++i) {
     encoder.writeBits(getLowBiasedHuffman(remaining - 1).write(rule[i] - 1));
     remaining -= rule[i];
   }
@@ -44,7 +47,11 @@ export function toShortByImage({ w, h }, board) {
   encoder.writeUnbounded(w);
   encoder.writeUnbounded(h);
 
-  const stream = runLengthEncode(board, MIN_RUN_LENGTH);
+  const stream = runLengthEncode(
+    board,
+    MIN_RUN_LENGTH,
+    (v) => v === UNKNOWABLE ? UNKNOWN : v,
+  );
 
   const counts = new Map([[UNKNOWN, 0], [OFF, 0], [ON, 0], [RUN, 0]]);
   for (const value of stream) {
@@ -63,7 +70,7 @@ export function toShortByImage({ w, h }, board) {
   const huffman = new Huffman(symbols);
   for (const value of stream) {
     encoder.writeBits(huffman.write(value.type));
-    if (value.arg !== undefined) {
+    if (value.arg !== null) {
       encoder.writeUnbounded(value.arg);
     }
   }
