@@ -152,7 +152,7 @@ root.append(editor, playerTitle, player.container, gameList);
 editorChanged();
 
 (async () => {
-  for (const game of ['football', 'hilbert', 'lcd5', 'yin-yang']) {
+  for (const game of ['dice', 'football', 'hilbert', 'spiral', 'star', 'lcd5', 'yin-yang']) {
     try {
       const r = await fetch(`games/${game}.json`);
       const definition = await r.json();
