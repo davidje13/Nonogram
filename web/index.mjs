@@ -1,4 +1,5 @@
 import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
+import { debounce } from '../src/util/debounce.mjs';
 import { compileGame, rulesForImage, extractRules } from '../src/game.mjs';
 import { AmbiguousError } from '../src/solver/errors.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
@@ -7,6 +8,7 @@ import { Resizer } from './Resizer.mjs';
 import { GridView } from './GridView.mjs';
 import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
+import { toShortByRules } from '../src/export.mjs';
 
 const root = document.createElement('div');
 document.body.append(root);
@@ -15,6 +17,56 @@ const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp
 
 const playerTitle = document.createElement('h2');
 playerTitle.textContent = '';
+let playerID = null;
+
+function save(id, grid) {
+  try {
+    window.localStorage.setItem(`game-${id}`, JSON.stringify({ ...grid, data: [...grid.data] }));
+  } catch (e) {
+    console.warn('failed to save', e);
+  }
+}
+
+function load(id) {
+  try {
+    const data = window.localStorage.getItem(`game-${id}`);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.warn('failed to load', e);
+  }
+  return null;
+}
+
+const debouncedSave = debounce(() => {
+  if (playerID) {
+    save(playerID, player.getGrid());
+  }
+}, 500);
+
+player.addEventListener('change', debouncedSave);
+window.addEventListener('blur', debouncedSave.immediate);
+window.addEventListener('visibilitychange', debouncedSave.immediate);
+window.addEventListener('beforeunload', debouncedSave.immediate, { passive: true });
+
+function setGame(name, rules, persist) {
+  debouncedSave.cancel();
+  if (playerID) {
+    save(playerID, player.getGrid());
+  }
+  playerTitle.textContent = name;
+  player.setRules(rules);
+  player.clear();
+  if (persist) {
+    playerID = toShortByRules(rules);
+    //window.location.hash = `#${new URLSearchParams({ name, rules: playerID })}`;
+    const grid = load(playerID);
+    if (grid) {
+      player.setGrid(grid);
+    }
+  }
+}
 
 const info = document.createElement('div');
 const definition = document.createElement('pre');
@@ -82,9 +134,7 @@ options.append(
   makeButton('clear', () => editorView.fill(OFF)),
   makeButton('play', () => {
     const rules = rulesForImage(editorView.getGrid());
-    playerTitle.textContent = 'New game';
-    player.setRules(rules);
-    player.clear();
+    setGame('New game', rules, false);
   }),
 );
 
@@ -120,9 +170,7 @@ function addGame(rules, name) {
   row.append(preview.canvas, label);
   row.addEventListener('click', (e) => {
     e.preventDefault();
-    playerTitle.textContent = name;
-    player.setRules(rules);
-    player.clear();
+    setGame(name, rules, true);
   });
   gameList.append(row);
 }

@@ -118,6 +118,20 @@ export class GridView extends EventTarget {
     return { width: this.w, height: this.h, data: this.values };
   }
 
+  setGrid({ width, height, data }) {
+    if (width <= 0 || height <= 0) {
+      throw new Error('invalid size');
+    }
+    this.w = width;
+    this.h = height;
+    this.values = new Uint8Array(this.w * this.h);
+    this.marked = new Uint8Array(this.w * this.h);
+    this.values.set(data, 0);
+    this._updateDisplaySize();
+    this.dirty = true;
+    Promise.resolve().then(() => this.draw());
+  }
+
   getTotalCellSize() {
     return {
       width: (this.cw + this.border) * this.displayScale,
@@ -160,6 +174,15 @@ export class GridView extends EventTarget {
     }
   }
 
+  _updateDisplaySize() {
+    const fullWidth = this.w * (this.cw + this.border) + this.border;
+    const fullHeight = this.h * (this.ch + this.border) + this.border;
+    this.canvas.width = fullWidth;
+    this.canvas.height = fullHeight;
+    this.canvas.style.width = `${fullWidth * this.displayScale}px`;
+    this.canvas.style.height = `${fullHeight * this.displayScale}px`;
+  }
+
   resize({ width = null, height = null, fill = UNKNOWN, dx = 0, dy = 0 }) {
     const oldW = this.w;
     const oldH = this.h;
@@ -192,12 +215,7 @@ export class GridView extends EventTarget {
         }
       }
     }
-    const fullWidth = this.w * (this.cw + this.border) + this.border;
-    const fullHeight = this.h * (this.ch + this.border) + this.border;
-    this.canvas.width = fullWidth;
-    this.canvas.height = fullHeight;
-    this.canvas.style.width = `${fullWidth * this.displayScale}px`;
-    this.canvas.style.height = `${fullHeight * this.displayScale}px`;
+    this._updateDisplaySize();
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
     this.dirty = true;
     this.draw();

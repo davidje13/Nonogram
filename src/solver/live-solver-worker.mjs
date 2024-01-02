@@ -1,4 +1,4 @@
-import { setImmediate } from '../setImmediate.mjs';
+import { setImmediate } from '../util/setImmediate.mjs';
 import { UNKNOWN } from '../constants.mjs';
 import { solver } from './solver.mjs';
 import { implications } from './methods/implications.mjs';

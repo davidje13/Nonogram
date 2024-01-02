@@ -57,8 +57,9 @@ class RulesView {
   }
 }
 
-export class GamePlayer {
+export class GamePlayer extends EventTarget {
   constructor({ cellSize, border, ruleChecker = null }) {
+    super();
     this._width = 0;
     this._height = 0;
     this._rulesT = new RulesView({
@@ -115,6 +116,17 @@ export class GamePlayer {
     this._rulesL.check(i, board.subarray(i * this._width, (i + 1) * this._width));
   }
 
+  getGrid() {
+    return this._display.getGrid();
+  }
+
+  setGrid(grid) {
+    if (grid.width !== this._width || grid.height !== this._height) {
+      throw new Error('size mismatch');
+    }
+    this._display.setGrid(grid);
+  }
+
   _change({ detail: { data, x, y } }) {
     if (x === undefined) {
       for (let i = 0; i < this._width; ++i) {
@@ -130,5 +142,6 @@ export class GamePlayer {
     } else {
       this.checkRow(y, data);
     }
+    this.dispatchEvent(new CustomEvent('change'));
   }
 }
