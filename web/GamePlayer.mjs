@@ -1,4 +1,5 @@
 import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
+import { compileGame } from '../src/game.mjs';
 import { GridView } from './GridView.mjs';
 
 class RulesView {
@@ -58,10 +59,14 @@ class RulesView {
 }
 
 export class GamePlayer extends EventTarget {
-  constructor({ cellSize, border, ruleChecker = null }) {
+  constructor({ cellSize, border, ruleChecker = null, hinter = null }) {
     super();
     this._width = 0;
     this._height = 0;
+    this._rules = { rows: [], cols: [] };
+    this._hinter = hinter;
+    this._hintLevel = 0;
+    this._hinting = false;
     this._rulesT = new RulesView({
       cellSize,
       border,
@@ -93,6 +98,7 @@ export class GamePlayer extends EventTarget {
   }
 
   setRules(rules) {
+    this._rules = rules;
     this._width = rules.cols.length;
     this._height = rules.rows.length;
     this._rulesL.setRules(rules.rows);
@@ -128,6 +134,9 @@ export class GamePlayer extends EventTarget {
   }
 
   _change({ detail: { data, x, y } }) {
+    this._hintLevel = 0;
+    this._hinting = false;
+    this._display.clearMarked();
     if (x === undefined) {
       for (let i = 0; i < this._width; ++i) {
         this.checkColumn(i, data);
@@ -143,5 +152,50 @@ export class GamePlayer extends EventTarget {
       this.checkRow(y, data);
     }
     this.dispatchEvent(new CustomEvent('change'));
+  }
+
+  async hint() {
+    if (this._hinting || !this._hinter) {
+      return false;
+    }
+    const level = this._hintLevel;
+    this._hinting = true;
+
+    this._display.clearMarked();
+    const { width, height, data } = this._display.getGrid();
+    let step = null;
+    try {
+      step = await this._hinter.hint(compileGame(this._rules), data);
+      if (!this._hinting) {
+        return false;
+      }
+    } catch (e) {
+      console.warn(e);
+      return false;
+    } finally {
+      this._hinting = false;
+    }
+
+    if (level < 1 && step.hint) {
+      for (const index of step.hint.cellIndices) {
+        this._display.setMarked(index % width, (index / width)|0);
+      }
+      this._hintLevel = 1;
+      return true;
+    }
+
+    if (step.board) {
+      for (let i = 0; i < width * height; ++i) {
+        const v = step.board[i];
+        if (v !== data[i] && (v === ON || v === OFF)) {
+          this._display.setMarked(i % width, (i / width)|0);
+        }
+      }
+      this._hintLevel = 0;
+      return true;
+    }
+
+    this._hintLevel = 0;
+    return false;
   }
 }

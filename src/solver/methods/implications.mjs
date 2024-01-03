@@ -91,6 +91,36 @@ function resolveImplications(implications, cell, value, depth) {
   return resolved;
 }
 
+function findContradictionPath(implications, cell, value, depth) {
+  const v0 = cell * 2 + (value === ON ? 1 : 0);
+  const resolved = new Map([[v0, -1]]);
+  let cur = [v0];
+  for (let d = 0; d < depth && cur.length; ++d) {
+    let next = [];
+    for (const v of cur) {
+      for (const n of implications[v]) {
+        if (resolved.has(n ^ 1)) {
+          let result = [];
+          for (let p = v; p !== -1; p = resolved.get(p)) {
+            result.push(p);
+          }
+          result.reverse();
+          for (let p = n ^ 1; p !== -1; p = resolved.get(p)) {
+            result.push(p);
+          }
+          return result.map((r) => r >>> 1);
+        }
+        if (!resolved.has(n)) {
+          resolved.set(n, v);
+          next.push(n);
+        }
+      }
+    }
+    cur = next;
+  }
+  return null;
+}
+
 export const implications = ({
   implicationFinder = perlRegexp,
   maxDepth = Number.POSITIVE_INFINITY,
@@ -100,7 +130,7 @@ export const implications = ({
     solve: implicationFinder(raw),
   }));
 
-  return function* (state, { sharedState }) {
+  return function* (state, { hint, sharedState }) {
     let implications = sharedState.get(implicationFinder);
     if (!implications) {
       implications = buildImplications(auxRules, state);
@@ -121,13 +151,43 @@ export const implications = ({
           }
         }
         impacts.set(cell, { on: onImp.size, off: offImp.size });
+        if (hint) {
+          const cellIndices = [];
+          for (const p of onImp) {
+            if (offImp.has(p)) {
+              cellIndices.push(p >>> 1);
+            }
+          }
+          if (cellIndices.length) {
+            yield {
+              hint: {
+                type: 'regardless',
+                cellSourceIndex: onImp.values().next().value >>> 1,
+                cellIndices,
+              },
+            };
+          }
+        }
       } else if (onImp !== null || offImp !== null) {
         for (const p of (onImp ?? offImp)) {
           state.board[p >>> 1] = (p & 1) ? ON : OFF;
         }
         state.changed = true;
+        if (hint) {
+          yield {
+            hint: {
+              type: 'contradiction',
+              cellIndices: findContradictionPath(
+                implications,
+                cell,
+                onImp === null ? ON : OFF,
+                maxDepth,
+              ),
+            },
+          };
+        }
       } else {
-        throw new InvalidGameError(`cell at index ${cell} can be neither on nor off`);
+        throw new InvalidGameError('no possible state', cell);
       }
     }
     sharedState.set('impacts', impacts);

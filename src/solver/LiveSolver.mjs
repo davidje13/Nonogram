@@ -7,20 +7,36 @@ export class LiveSolver extends EventTarget {
     super();
 
     this.activeID = 0;
+    this.callback = null;
     this.worker = new Worker(workerPath, { type: 'module' });
-    this.worker.addEventListener('message', ({ data: { id, error, board } }) => {
+    this.worker.addEventListener('message', ({ data: { id, error, ...data } }) => {
       if (id === this.activeID) {
         if (typeof error === 'object' && error?.exampleBoards) {
           error = new AmbiguousError(error.exampleBoards);
         }
-        this.dispatchEvent(new CustomEvent('complete', { detail: { error, board } }));
+        this.callback(error, data);
       }
     });
   }
 
-  solveInBackground(game) {
+  solveInBackground(game, current = null) {
     ++this.activeID;
+    this.callback = (error, { board }) => this.dispatchEvent(new CustomEvent('complete', { detail: { error, board } }));
     this.dispatchEvent(new CustomEvent('begin'));
-    this.worker.postMessage({ game, id: this.activeID });
+    this.worker.postMessage({ game, current, id: this.activeID });
+  }
+
+  hint(game, current) {
+    return new Promise((resolve, reject) => {
+      ++this.activeID;
+      this.callback = (error, data) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(data);
+        }
+      };
+      this.worker.postMessage({ game, current, id: this.activeID, hint: true });
+    });
   }
 }

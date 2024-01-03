@@ -12,27 +12,13 @@ import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/erro
 import { implications } from '../src/solver/methods/implications.mjs';
 import { fork } from '../src/solver/methods/fork.mjs';
 import { isolatedRules } from '../src/solver/methods/isolated-rules.mjs';
-import { trivial } from '../src/solver/methods/isolated-rules/trivial.mjs';
-import { regExp } from '../src/solver/methods/isolated-rules/regexp.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
-import { caps } from '../src/solver/methods/isolated-rules/caps.mjs';
 
 const fastSolver = solver(
   isolatedRules(perlRegexp),
   implications(),
   fork({ parallel: false }),
 );
-
-//const difficultyJudgeSolver = solver(
-//  isolatedRules(trivial),
-//  isolatedRules(caps),
-//  isolatedRules(regExp),
-//  isolatedRules(perlRegexp),
-//  implications({ maxDepth: 2 }),
-//  implications(),
-//  fork({ parallel: false, maxDepth: 5, fastSolve: false }),
-//  fork({ parallel: false, fastSolve: false }),
-//);
 
 function run(gameFile) {
   const rules = extractRules(JSON.parse(readFileSync(gameFile)));

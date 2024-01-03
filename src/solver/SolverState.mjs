@@ -1,4 +1,4 @@
-import { UNKNOWN } from '../constants.mjs';
+import { UNKNOWN, OFF, ON } from '../constants.mjs';
 import { InvalidGameError } from './errors.mjs';
 
 export class SolverState {
@@ -20,7 +20,7 @@ export class SolverState {
     const old = this.board[index];
     if (old !== value) {
       if (old !== UNKNOWN) {
-        throw new InvalidGameError(`contradiction at index ${index}`);
+        throw new InvalidGameError('contradiction', index);
       }
       this.board[index] = value;
       this.changed = true;
@@ -55,11 +55,27 @@ export class SolverState {
       const old = this.board[index];
       if (old !== value) {
         if (old !== UNKNOWN) {
-          throw new InvalidGameError(`contradiction at index ${index}`);
+          throw new InvalidGameError('contradiction', index);
         }
         this.board[index] = value;
         this.changed = true;
       }
     }
+  }
+
+  countBoardLine(boardLine, cellIndices) {
+    let on = 0;
+    let off = 0;
+    for (let n = 0; n < cellIndices.length; ++n) {
+      const value = boardLine[n];
+      if (this.board[cellIndices[n]] !== value) {
+        if (value === ON) {
+          ++on;
+        } else if (value === OFF) {
+          ++off;
+        }
+      }
+    }
+    return { on, off };
   }
 }

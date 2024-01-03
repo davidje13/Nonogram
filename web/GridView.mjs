@@ -128,6 +128,7 @@ export class GridView extends EventTarget {
     this.marked = new Uint8Array(this.w * this.h);
     this.values.set(data, 0);
     this._updateDisplaySize();
+    this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
     this.dirty = true;
     Promise.resolve().then(() => this.draw());
   }

@@ -5,9 +5,9 @@ import { SolverState } from './SolverState.mjs';
 export const solver = (...methods) => (rules) => {
   const auxMethods = methods.map((method) => method(rules));
 
-  function* solve(state) {
+  function* solve(state, hint) {
     steps: while (state.board.includes(UNKNOWN)) {
-      const ctx = { solve, sharedState: new Map() };
+      const ctx = { solve, hint, sharedState: new Map() };
       for (const method of auxMethods) {
         state.changed = false;
         yield* method(state, ctx);
@@ -20,7 +20,7 @@ export const solver = (...methods) => (rules) => {
     }
   };
 
-  const solveSteps = (board) => {
+  const solveSteps = (board, hint = false) => {
     const coveredCells = new Set();
     for (const { cellIndices } of rules) {
       cellIndices.forEach((i) => coveredCells.add(i));
@@ -30,13 +30,20 @@ export const solver = (...methods) => (rules) => {
         board[i] = UNKNOWABLE;
       }
     }
-    return solve(new SolverState(board));
+    return solve(new SolverState(board), hint);
   };
 
   return {
     solveSteps,
     solve: (board) => {
       for (const _ of solveSteps(board)) {}
+    },
+    hint: (board) => {
+      for (const step of solveSteps(board, true)) {
+        if (step?.hint) {
+          return step;
+        }
+      }
     },
   };
 };

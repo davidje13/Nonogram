@@ -12,7 +12,8 @@ export class StuckError extends Error {
 }
 
 export class InvalidGameError extends Error {
-  constructor(reason) {
-    super(reason);
+  constructor(reason, conflictIndex = null) {
+    super(conflictIndex === null ? reason : `${reason} at ${conflictIndex}`);
+    this.conflictIndex = conflictIndex;
   }
 }

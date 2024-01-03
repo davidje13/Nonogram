@@ -28,7 +28,7 @@ function extractBlocks(boardLine) {
 }
 
 /**
- * The caps solver is untentionally inferior to the regexp solver, and represents a
+ * The caps solver is intentionally inferior to the regexp solver, and represents a
  * very simple mental model for solving games (which can be used to infer difficulty)
  *
  * It is unable to solve any games alone, but the situations it applies to are obvious

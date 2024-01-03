@@ -96,7 +96,11 @@ function* runParallel(paths, maxDepth, check, resultOut) {
       } catch (e) {
         if (e instanceof StuckError) {
           possible.push(path.state);
-        } else if (!(e instanceof InvalidGameError)) {
+        } else if (e instanceof InvalidGameError) {
+          if (e.conflictIndex !== null) {
+            resultOut.conflictIndex = e.conflictIndex;
+          }
+        } else {
           throw e;
         }
         done = true;
@@ -152,6 +156,9 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
       }
     } catch (e) {
       if (e instanceof InvalidGameError) {
+        if (e.conflictIndex !== null) {
+          resultOut.conflictIndex = e.conflictIndex;
+        }
         --remaining;
       } else if (e instanceof StuckError) {
         if (result !== null) {
@@ -176,7 +183,7 @@ export const fork = ({
   const { check, auxChecks } = makeCheck(checker, rules);
   const fn = parallel ? runParallel : runSynchronous;
 
-  return function* (state, { solve, sharedState }) {
+  return function* (state, { solve, hint, sharedState }) {
     let impacts = sharedState.get('impacts');
     if (!impacts) {
       impacts = new Map();
@@ -198,10 +205,17 @@ export const fork = ({
       path.iterator = solve(path.state);
     }
 
-    const result = { state: null };
+    const result = { state: null, conflictIndex: null };
     yield* fn(paths, maxDepth, check, result);
 
     if (result.state) {
+      if (hint) {
+        const cellIndices = [trial.i];
+        if (result.conflictIndex !== null) {
+          cellIndices.push(result.conflictIndex);
+        }
+        yield { hint: { type: 'fork', cellIndices } };
+      }
       if (fastSolve) {
         state.set(result.state);
       } else {

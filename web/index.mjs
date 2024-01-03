@@ -13,7 +13,12 @@ import { toShortByRules } from '../src/export.mjs';
 const root = document.createElement('div');
 document.body.append(root);
 
-const player = new GamePlayer({ cellSize: 23, border: 1, ruleChecker: perlRegexp });
+const player = new GamePlayer({
+  cellSize: 23,
+  border: 1,
+  ruleChecker: perlRegexp,
+  hinter: new LiveSolver(),
+});
 
 const playerTitle = document.createElement('h2');
 playerTitle.textContent = '';
@@ -54,17 +59,20 @@ function setGame(name, rules, persist) {
   debouncedSave.cancel();
   if (playerID) {
     save(playerID, player.getGrid());
+    playerID = null;
   }
   playerTitle.textContent = name;
   player.setRules(rules);
-  player.clear();
+  let grid;
   if (persist) {
     playerID = toShortByRules(rules);
     //window.location.hash = `#${new URLSearchParams({ name, rules: playerID })}`;
-    const grid = load(playerID);
-    if (grid) {
-      player.setGrid(grid);
-    }
+    grid = load(playerID);
+  }
+  if (grid) {
+    player.setGrid(grid);
+  } else {
+    player.clear();
   }
 }
 
@@ -195,7 +203,19 @@ window.addEventListener('drop', async (e) => {
   }
 });
 
-root.append(editor, playerTitle, player.container, gameList);
+const playOptions = document.createElement('div');
+playOptions.className = 'options';
+playOptions.append(
+  makeButton('hint', () => player.hint()),
+);
+
+root.append(
+  editor,
+  playerTitle,
+  player.container,
+  playOptions,
+  gameList,
+);
 
 editorChanged();
 
