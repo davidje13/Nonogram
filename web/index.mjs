@@ -105,11 +105,13 @@ liveSolver.addEventListener('complete', ({ detail }) => {
   if (!detail.error) {
     info.textContent = 'Game is valid.';
   } else if (detail.error instanceof AmbiguousError) {
+    const cells = [];
     for (let i = 0; i < detail.board.length; ++i) {
       if (detail.board[i] === UNKNOWN) {
-        editorView.setMarked(i, 0, true);
+        cells.push(i);
       }
     }
+    editorView.mark('cells', cells);
     info.textContent = 'Game is ambiguous.';
   } else {
     console.error(detail.error);

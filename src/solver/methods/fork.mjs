@@ -210,11 +210,11 @@ export const fork = ({
 
     if (result.state) {
       if (hint) {
-        const cellIndices = [trial.i];
+        const path = [trial.i];
         if (result.conflictIndex !== null) {
-          cellIndices.push(result.conflictIndex);
+          path.push(result.conflictIndex);
         }
-        yield { hint: { type: 'fork', cellIndices } };
+        yield { hint: { type: 'fork', paths: [path] } };
       }
       if (fastSolve) {
         state.set(result.state);

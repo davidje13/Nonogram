@@ -162,10 +162,10 @@ export class GamePlayer extends EventTarget {
     this._hinting = true;
 
     this._display.clearMarked();
-    const { width, height, data } = this._display.getGrid();
+    const grid = this._display.getGrid();
     let step = null;
     try {
-      step = await this._hinter.hint(compileGame(this._rules), data);
+      step = await this._hinter.hint(compileGame(this._rules), grid.data);
       if (!this._hinting) {
         return false;
       }
@@ -177,20 +177,22 @@ export class GamePlayer extends EventTarget {
     }
 
     if (level < 1 && step.hint) {
-      for (const index of step.hint.cellIndices) {
-        this._display.setMarked(index % width, (index / width)|0);
+      for (const path of step.hint.paths) {
+        this._display.mark('path', path);
       }
       this._hintLevel = 1;
       return true;
     }
 
     if (step.board) {
-      for (let i = 0; i < width * height; ++i) {
+      const cells = [];
+      for (let i = 0; i < step.board.length; ++i) {
         const v = step.board[i];
-        if (v !== data[i] && (v === ON || v === OFF)) {
-          this._display.setMarked(i % width, (i / width)|0);
+        if (v !== grid.data[i] && (v === ON || v === OFF)) {
+          cells.push(i);
         }
       }
+      this._display.mark('cells', cells);
       this._hintLevel = 0;
       return true;
     }

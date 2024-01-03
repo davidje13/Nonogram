@@ -32,7 +32,7 @@ export const isolatedRules = (perRuleMethod) => (rules) => {
       yield {
         hint: {
           type: 'rule',
-          cellIndices: bestRule.cellIndices,
+          paths: [bestRule.cellIndices],
         },
       };
     }

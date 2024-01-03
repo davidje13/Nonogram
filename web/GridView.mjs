@@ -11,7 +11,7 @@ export class GridView extends EventTarget {
     this.border = 1;
     this.displayScale = 1;
     this.values = new Uint8Array(0);
-    this.marked = new Uint8Array(0);
+    this.marks = [];
     this.tiles = [];
 
     this.canvas = document.createElement('canvas');
@@ -125,7 +125,7 @@ export class GridView extends EventTarget {
     this.w = width;
     this.h = height;
     this.values = new Uint8Array(this.w * this.h);
-    this.marked = new Uint8Array(this.w * this.h);
+    this.marks.length = 0;
     this.values.set(data, 0);
     this._updateDisplaySize();
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
@@ -158,21 +158,23 @@ export class GridView extends EventTarget {
   }
 
   clearMarked() {
-    if (this.marked.includes(1)) {
-      this.marked.fill(0);
+    if (this.marks.length) {
+      this.marks.length = 0;
       this.dirty = true;
       Promise.resolve().then(() => this.draw());
     }
   }
 
-  setMarked(x, y, marked = true) {
-    const p = y * this.w + x;
-    const value = marked ? 1 : 0;
-    if (this.marked[p] !== value) {
-      this.marked[p] = value;
-      this.dirty = true;
-      Promise.resolve().then(() => this.draw());
+  mark(type, cells) {
+    if (!cells.length) {
+      return;
     }
+    this.marks.push({
+      type,
+      cells: cells.map((c) => typeof c === 'number' ? { x: c % this.w, y: (c / this.w)|0 } : c),
+    });
+    this.dirty = true;
+    Promise.resolve().then(() => this.draw());
   }
 
   _updateDisplaySize() {
@@ -188,14 +190,13 @@ export class GridView extends EventTarget {
     const oldW = this.w;
     const oldH = this.h;
     const oldValues = this.values;
-    const oldMarked = this.marked;
     if (width < 0 || height < 0) {
       throw new Error('invalid size');
     }
     this.w = width ?? oldW;
     this.h = height ?? oldH;
     this.values = new Uint8Array(this.w * this.h);
-    this.marked = new Uint8Array(this.w * this.h);
+    this.marks.length = 0;
     for (let y = 0; y < this.h; ++y) {
       const oy = y - dy;
       if (oy >= 0 && oy < oldH) {
@@ -203,16 +204,13 @@ export class GridView extends EventTarget {
           const ox = x - dx;
           if (ox >= 0 && ox < oldW) {
             this.values[y * this.w + x] = oldValues[oy * oldW + ox];
-            this.marked[y * this.w + x] = oldMarked[oy * oldW + ox];
           } else {
             this.values[y * this.w + x] = fill;
-            this.marked[y * this.w + x] = 0;
           }
         }
       } else {
         for (let x = 0; x < this.w; ++x) {
           this.values[y * this.w + x] = fill;
-          this.marked[y * this.w + x] = 0;
         }
       }
     }
@@ -241,17 +239,50 @@ export class GridView extends EventTarget {
       }
     }
 
-    const r = border * 0.5;
-    this.ctx.strokeStyle = '#FF0000';
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.lineWidth = Math.max(r * 2, 3);
-    for (let y = 0; y < h; ++y) {
-      const yy = y * (ch + border) + border;
-      for (let x = 0; x < w; ++x) {
-        if (this.marked[y * w + x]) {
-          const xx = x * (cw + border) + border;
-          this.ctx.strokeRect(xx - r, yy - r, cw + r * 2, ch + r * 2);
+    for (const mark of this.marks) {
+      switch (mark.type) {
+        case 'cells': {
+          const r = border * 0.5;
+          this.ctx.strokeStyle = '#FF0000';
+          this.ctx.lineCap = 'round';
+          this.ctx.lineJoin = 'round';
+          this.ctx.lineWidth = Math.max(r * 2, 3);
+          for (const { x, y } of mark.cells) {
+            this.ctx.strokeRect(x * (cw + border) + border - r, y * (ch + border) + border - r, cw + r * 2, ch + r * 2);
+          }
+          break;
+        }
+        case 'path': {
+          this.ctx.strokeStyle = 'rgba(0, 128, 255, 0.5)';
+          this.ctx.lineCap = 'round';
+          this.ctx.lineJoin = 'round';
+          let prevX = 0;
+          let prevY = 0;
+          for (let i = 0; i < mark.cells.length; ++i) {
+            const { x, y } = mark.cells[i];
+            const xx = x * (cw + border) + border + cw * 0.5;
+            const yy = y * (ch + border) + border + ch * 0.5;
+            if (i === 0) {
+              this.ctx.lineWidth = 10;
+              this.ctx.beginPath();
+              this.ctx.moveTo(xx, yy);
+              this.ctx.lineTo(xx, yy);
+              this.ctx.stroke();
+            } else {
+              this.ctx.lineWidth = 2;
+              this.ctx.beginPath();
+              this.ctx.moveTo(prevX, prevY);
+              this.ctx.lineTo(xx, yy);
+              this.ctx.stroke();
+              this.ctx.lineWidth = i === mark.cells.length - 1 ? 6 : 4;
+              this.ctx.beginPath();
+              this.ctx.moveTo(xx, yy);
+              this.ctx.lineTo(xx, yy);
+              this.ctx.stroke();
+            }
+            prevX = xx;
+            prevY = yy;
+          }
         }
       }
     }

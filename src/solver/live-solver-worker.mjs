@@ -25,8 +25,6 @@ const hintSolver = solver(
   isolatedRules(trivial),
   isolatedRules(regExp),
   isolatedRules(perlRegexp),
-  implications({ maxDepth: 2 }),
-  implications({ maxDepth: 3 }),
   implications(),
   fork({ parallel: false, maxDepth: 5, fastSolve: false }),
   fork({ parallel: false }),

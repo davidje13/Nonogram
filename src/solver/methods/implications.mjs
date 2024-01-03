@@ -71,54 +71,50 @@ function buildImplications(auxRules, state) {
 
 function resolveImplications(implications, cell, value, depth) {
   const v0 = cell * 2 + (value === ON ? 1 : 0);
-  const resolved = new Set([v0]);
+  const resolved = new Map([[v0, { depth: 0, prev: -1 }]]);
   let cur = [v0];
   for (let d = 0; d < depth && cur.length; ++d) {
     let next = [];
     for (const v of cur) {
       for (const n of implications[v]) {
-        if (resolved.has(n ^ 1)) {
-          return null; // found a contradiction
-        }
         if (!resolved.has(n)) {
-          resolved.add(n);
+          resolved.set(n, { depth: d + 1, prev: v });
           next.push(n);
+        }
+        if (resolved.has(n ^ 1)) {
+          // found a contradiction
+          return { contradiction: true, resolved, index: n >>> 1 };
         }
       }
     }
     cur = next;
   }
-  return resolved;
+  return { contradiction: false, resolved };
 }
 
-function findContradictionPath(implications, cell, value, depth) {
-  const v0 = cell * 2 + (value === ON ? 1 : 0);
-  const resolved = new Map([[v0, -1]]);
-  let cur = [v0];
-  for (let d = 0; d < depth && cur.length; ++d) {
-    let next = [];
-    for (const v of cur) {
-      for (const n of implications[v]) {
-        if (resolved.has(n ^ 1)) {
-          let result = [];
-          for (let p = v; p !== -1; p = resolved.get(p)) {
-            result.push(p);
-          }
-          result.reverse();
-          for (let p = n ^ 1; p !== -1; p = resolved.get(p)) {
-            result.push(p);
-          }
-          return result.map((r) => r >>> 1);
-        }
-        if (!resolved.has(n)) {
-          resolved.set(n, v);
-          next.push(n);
-        }
+function findPath(resolved, v) {
+  const result = [];
+  for (let p = v; p !== -1; p = resolved.get(p).prev) {
+    result.push(p);
+  }
+  return result.map((r) => r >>> 1);
+}
+
+function applyToState(state, onImp, offImp) {
+  if (onImp.contradiction || offImp.contradiction) {
+    const imp = onImp.contradiction ? offImp : onImp;
+    for (const p of imp.resolved.keys()) {
+      state.board[p >>> 1] = (p & 1) ? ON : OFF;
+    }
+    state.changed = true;
+  } else {
+    for (const p of onImp.resolved.keys()) {
+      if (offImp.resolved.has(p)) {
+        state.board[p >>> 1] = (p & 1) ? ON : OFF;
+        state.changed = true;
       }
     }
-    cur = next;
   }
-  return null;
 }
 
 export const implications = ({
@@ -136,60 +132,70 @@ export const implications = ({
       implications = buildImplications(auxRules, state);
       sharedState.set(implicationFinder, implications);
     }
+
     const impacts = new Map();
+    let best = { score: Number.NEGATIVE_INFINITY, hint: null };
     for (let cell = 0; cell < state.board.length; ++cell) {
       if (state.board[cell] !== UNKNOWN) {
         continue;
       }
       const onImp = resolveImplications(implications, cell, ON, maxDepth);
       const offImp = resolveImplications(implications, cell, OFF, maxDepth);
-      if (onImp !== null && offImp !== null) {
-        for (const p of onImp) {
-          if (offImp.has(p)) {
-            state.board[p >>> 1] = (p & 1) ? ON : OFF;
-            state.changed = true;
-          }
-        }
-        impacts.set(cell, { on: onImp.size, off: offImp.size });
-        if (hint) {
-          const cellIndices = [];
-          for (const p of onImp) {
-            if (offImp.has(p)) {
-              cellIndices.push(p >>> 1);
+      if (onImp.contradiction && offImp.contradiction) {
+        throw new InvalidGameError('no possible state', cell);
+      }
+      if (!onImp.contradiction && !offImp.contradiction) {
+        impacts.set(cell, { on: onImp.resolved.size, off: offImp.resolved.size });
+      }
+      if (hint) {
+        let score = Number.NEGATIVE_INFINITY;
+        let hintDetail = null;
+        if (onImp.contradiction || offImp.contradiction) {
+          const invalidImp = onImp.contradiction ? onImp : offImp;
+          const validImp = onImp.contradiction ? offImp : onImp;
+          const contradiction = invalidImp.index << 1;
+          const path = [
+            ...findPath(invalidImp.resolved, contradiction).reverse(),
+            ...findPath(invalidImp.resolved, contradiction ^ 1),
+          ];
+          score = validImp.resolved.size - path.length * state.board.length;
+          hintDetail = { type: 'contradiction', paths: [path] };
+        } else {
+          let bestDepth = Number.POSITIVE_INFINITY;
+          let bestTarget = null;
+          let total = 0;
+          for (const [p, r1] of onImp.resolved) {
+            const r2 = offImp.resolved.get(p);
+            if (r2) {
+              ++total;
+              if (r1.depth + r2.depth < bestDepth) {
+                bestDepth = r1.depth + r2.depth;
+                bestTarget = p;
+              }
             }
           }
-          if (cellIndices.length) {
-            yield {
-              hint: {
-                type: 'regardless',
-                cellSourceIndex: onImp.values().next().value >>> 1,
-                cellIndices,
-              },
+          if (bestTarget !== null) {
+            score = total - bestDepth * state.board.length;
+            hintDetail = {
+              type: 'regardless',
+              paths: [
+                findPath(onImp.resolved, bestTarget).reverse(),
+                findPath(offImp.resolved, bestTarget).reverse(),
+              ],
             };
           }
         }
-      } else if (onImp !== null || offImp !== null) {
-        for (const p of (onImp ?? offImp)) {
-          state.board[p >>> 1] = (p & 1) ? ON : OFF;
-        }
-        state.changed = true;
-        if (hint) {
-          yield {
-            hint: {
-              type: 'contradiction',
-              cellIndices: findContradictionPath(
-                implications,
-                cell,
-                onImp === null ? ON : OFF,
-                maxDepth,
-              ),
-            },
-          };
+        if (score > best.score) {
+          best = { score, onImp, offImp, hint: hintDetail };
         }
       } else {
-        throw new InvalidGameError('no possible state', cell);
+        applyToState(state, onImp, offImp);
       }
     }
     sharedState.set('impacts', impacts);
+    if (hint && best.hint) {
+      applyToState(state, best.onImp, best.offImp);
+      yield { hint: best.hint };
+    }
   };
 };
