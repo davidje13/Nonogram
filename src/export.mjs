@@ -42,10 +42,14 @@ function encodeRules(encoder, rules, limit) {
 const COUNT_BITS = 2;
 const MIN_RUN_LENGTH = 6;
 
+function writeSize(encoder, w, h) {
+  encoder.writeExpGolomb(w, 4);
+  encoder.writeExpGolomb(h, 4);
+}
+
 export function toShortByImage({ w, h }, board) {
   const encoder = new BitEncoder();
-  encoder.writeUnbounded(w);
-  encoder.writeUnbounded(h);
+  writeSize(encoder, w, h);
 
   const stream = runLengthEncode(
     board,
@@ -71,13 +75,12 @@ export function toShortByImage({ w, h }, board) {
   for (const value of stream) {
     encoder.writeBits(huffman.write(value.type));
     if (value.arg !== null) {
-      encoder.writeUnbounded(value.arg);
+      encoder.writeExpGolomb(value.arg, 1);
     }
   }
   if (counts.get(UNKNOWN) === 0) {
     const encoder2 = new BitEncoder();
-    encoder2.writeUnbounded(w);
-    encoder2.writeUnbounded(h);
+    writeSize(encoder2, w, h);
     for (let i = 0; i < w * h; ++i) {
       encoder2.writeBit(board[i] === ON);
     }
@@ -90,8 +93,7 @@ export function toShortByImage({ w, h }, board) {
 
 export function toShortByRules({ rows, cols }) {
   const encoder = new BitEncoder();
-  encoder.writeUnbounded(cols.length);
-  encoder.writeUnbounded(rows.length);
+  writeSize(encoder, cols.length, rows.length);
   encodeRules(encoder, rows, cols.length);
   encodeRules(encoder, cols, rows.length);
   return `R${encoder}`;
