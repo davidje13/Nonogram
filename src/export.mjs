@@ -13,9 +13,9 @@ function getLowBiasedHuffman(limit) {
     const symbols = [];
     for (let i = 0; i <= limit; ++i) {
       // (i+2)^-2 is closer to the unbounded distribution, but (i+2)^-1 gives better results here experimentally
-      symbols.push({ value: i, p: new Rational(1, i + 2) });
+      symbols.push([i, new Rational(1, i + 2)]);
     }
-    HUFFMAN_CACHE.set(limit, new Huffman(symbols));
+    HUFFMAN_CACHE.set(limit, Huffman.fromFrequencies(symbols));
   }
   return HUFFMAN_CACHE.get(limit);
 }
@@ -61,17 +61,11 @@ export function toShortByImage({ w, h }, board) {
   for (const value of stream) {
     counts.set(value.type, counts.get(value.type) + 1);
   }
-  const maxCount = Math.max(...counts.values());
-  const symbols = [];
-  for (const [type, count] of counts.entries()) {
-    let scaled = 0;
-    if (count) {
-      scaled = Math.max(Math.floor((count * ((1 << COUNT_BITS) - 1)) / maxCount), 1);
-      symbols.push({ value: type, p: scaled });
-    }
-    encoder.writeBinary(scaled, COUNT_BITS);
+  const huffmanLengths = Huffman.frequenciesToLengths(counts.entries());
+  for (const [, length] of huffmanLengths) {
+    encoder.writeBinary(length, COUNT_BITS);
   }
-  const huffman = new Huffman(symbols);
+  const huffman = new Huffman(huffmanLengths);
   for (const value of stream) {
     encoder.writeBits(huffman.write(value.type));
     if (value.arg !== null) {

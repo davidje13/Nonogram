@@ -1,19 +1,56 @@
 export class Huffman {
-  constructor(symbols) {
-    if (!symbols.length) {
-      throw new Error('cannot build empty huffman tree');
+  constructor(symbolLengths) {
+    this.symbols = new Map();
+    for (const [value, length] of symbolLengths) {
+      if (length) {
+        this.symbols.set(value, { value, length, pattern: null });
+      }
     }
-    const innerSymbols = symbols.map((s) => ({
-      value: s.value,
-      p: Rational.from(s.p),
+    if (this.symbols.size === 1) {
+      // special case: if there is only one symbol, its length is ignored and set to 0 because nothing else can be encoded
+      this.symbols.values().next().value.length = 0;
+    }
+
+    const v = [];
+    // shorter codes first (sort is stable so order of elements is otherwise maintained)
+    for (const symbol of [...this.symbols.values()].sort((a, b) => a.length - b.length)) {
+      if (v.length) {
+        // increment
+        let i = v.length - 1;
+        while (v[i]) {
+          v[i] = 0;
+          --i;
+        }
+        v[i] = 1;
+      }
+      while (v.length < symbol.length) {
+        // grow
+        v.push(0);
+      }
+      symbol.pattern = [...v];
+    }
+  }
+
+  static frequenciesToLengths(symbolFrequencies) {
+    const symbols = [...symbolFrequencies].map(([value, frequency]) => ({
+      value: value,
+      p: Rational.from(frequency),
       parent: null,
-      bits: null,
     }));
-    const queue = [...innerSymbols].sort((a, b) => b.p.compare(a.p)); // low p at end
+
+    const queue = symbols
+      .filter((symbol) => symbol.p.compare(Rational.ZERO) > 0)
+      .sort((a, b) => b.p.compare(a.p)); // low p at end
+
+    if (queue.length === 1) {
+      // special case: only one symbol - it will be encoded in 0 bits,
+      // but we must record that it exists, which we do by giving it a non-zero length
+      queue.pop().parent = { value: null, p: Rational.ZERO, parent: null };
+    }
     while (queue.length > 1) {
       const c2 = queue.pop();
       const c1 = queue.pop();
-      const parent = { next: [c1, c2], p: c1.p.add(c2.p), parent: null };
+      const parent = { value: null, p: c1.p.add(c2.p), parent: null };
       c1.parent = c2.parent = parent;
       // binary search for new location
       let p1 = 0;
@@ -28,16 +65,18 @@ export class Huffman {
       }
       queue.splice(p1, 0, parent);
     }
-    this.root = queue[0];
-    this.symbols = new Map();
-    for (const symbol of innerSymbols) {
-      this.symbols.set(symbol.value, symbol);
-      const bits = [];
+
+    return symbols.map((symbol) => {
+      let length = 0;
       for (let s = symbol; s.parent; s = s.parent) {
-        bits.push(s.parent.next.indexOf(s));
+        ++length;
       }
-      symbol.bits = bits.reverse();
-    }
+      return [symbol.value, length];
+    });
+  }
+
+  static fromFrequencies(symbolFrequencies) {
+    return new Huffman(Huffman.frequenciesToLengths(symbolFrequencies));
   }
 
   write(value) {
@@ -45,13 +84,13 @@ export class Huffman {
     if (!symbol) {
       throw new Error(`unknown symbol ${value}`);
     }
-    return symbol.bits;
+    return symbol.pattern;
   }
 
   toString() {
     const r = [];
     for (const symbol of this.symbols.values()) {
-      r.push(`${String(symbol.value).padStart(5, ' ')} => ${symbol.bits.join('') || '-'}`);
+      r.push(`${String(symbol.value).padStart(5, ' ')} => ${symbol.pattern.join('') || '-'}`);
     }
     return r.join('\n');
   }
@@ -80,6 +119,8 @@ export class Rational {
       throw new Error(`invalid number ${v}`);
     }
   }
+
+  static ZERO = new Rational(0);
 
   simplify() {
     const d = gcd(this.num, this.den);

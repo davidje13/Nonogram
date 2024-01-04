@@ -53,10 +53,6 @@ export class BitEncoder {
     }
   }
 
-  writeHuffman(value, huffman) {
-    this.writeBits(huffman.write(value));
-  }
-
   writeExpGolomb(value, k = 0) {
     const a = (value >>> k) + 1;
     const bits = bitLength(a);
