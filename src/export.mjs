@@ -1,7 +1,6 @@
 import { UNKNOWN, OFF, ON, UNKNOWABLE } from './constants.mjs';
 import { BitEncoder } from './data/BitEncoder.mjs';
 import { Huffman, Rational } from './data/huffman.mjs';
-import { RUN, runLengthEncode } from './data/rle.mjs';
 
 const HUFFMAN_CACHE = new Map();
 
@@ -39,44 +38,51 @@ function encodeRules(encoder, rules, limit) {
   }
 }
 
-const COUNT_BITS = 2;
-const MIN_RUN_LENGTH = 6;
-
 function writeSize(encoder, w, h) {
   encoder.writeExpGolomb(w, 4);
   encoder.writeExpGolomb(h, 4);
 }
 
 export function toShortByImage({ w, h }, board) {
+  const size = w * h;
+
+  const mapped = new Uint8Array(size);
+  for (let i = 0; i < size; ++i) {
+    mapped[i] = board[i] === UNKNOWABLE ? UNKNOWN : board[i];
+  }
+
+  const symbols = [UNKNOWN, OFF, ON];
+  const exists = symbols.map((v) => mapped.includes(v));
+  const alphabet = symbols.filter((_, i) => exists[i]);
+  if (alphabet.length === 0) {
+    throw new Error('unknown board symbols');
+  }
+
   const encoder = new BitEncoder();
   writeSize(encoder, w, h);
-
-  const stream = runLengthEncode(
-    board,
-    MIN_RUN_LENGTH,
-    (v) => v === UNKNOWABLE ? UNKNOWN : v,
-  );
-
-  const counts = new Map([[UNKNOWN, 0], [OFF, 0], [ON, 0], [RUN, 0]]);
-  for (const value of stream) {
-    counts.set(value.type, counts.get(value.type) + 1);
-  }
-  const huffmanLengths = Huffman.frequenciesToLengths(counts.entries());
-  for (const [, length] of huffmanLengths) {
-    encoder.writeBinary(length, COUNT_BITS);
-  }
-  const huffman = new Huffman(huffmanLengths);
-  for (const value of stream) {
-    encoder.writeBits(huffman.write(value.type));
-    if (value.arg !== null) {
-      encoder.writeExpGolomb(value.arg, 1);
+  encoder.writeBits(exists);
+  for (let i = 0, previous = null; i < size;) {
+    const v = mapped[i];
+    const huff = getLowBiasedHuffman(alphabet.length - (previous === null ? 1 : 2));
+    let index = 0;
+    for (let j = 0; alphabet[j] !== v; ++j) {
+      index += (alphabet[j] !== previous) ? 1 : 0;
     }
+    encoder.writeBits(huff.write(index));
+    let run = 1;
+    while (i + run < size && mapped[i + run] === v) {
+      ++run;
+    }
+    encoder.writeExpGolomb(run - 1, 1);
+    previous = v;
+    i += run;
   }
-  if (counts.get(UNKNOWN) === 0) {
+
+  if (!mapped.includes(UNKNOWN)) {
     const encoder2 = new BitEncoder();
     writeSize(encoder2, w, h);
     for (let i = 0; i < w * h; ++i) {
-      encoder2.writeBit(board[i] === ON);
+      encoder2.writeBit(mapped[i] === ON);
     }
     if (encoder2.length() <= encoder.length()) {
       return `B${encoder2}`;

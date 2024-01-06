@@ -54,6 +54,9 @@ export class BitEncoder {
   }
 
   writeExpGolomb(value, k = 0) {
+    if (value < 0) {
+      throw new Error(`value ${value} out of bounds (positive integer)`);
+    }
     const a = (value >>> k) + 1;
     const bits = bitLength(a);
     for (let i = 0; i < bits - 1; ++ i) {

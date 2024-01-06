@@ -55,7 +55,9 @@ function run(gameFile) {
 
   process.stdout.write(`\n`);
   process.stdout.write(`Short image: ${toShortByImage(game, board)}\n`);
-  process.stdout.write(`Short rules: ${toShortByRules(game)}\n`);
+  try {
+    process.stdout.write(`Short rules: ${toShortByRules(game)}\n`);
+  } catch {}
   process.stdout.write(`Solving time: ${(tmEnd - tmBegin).toFixed(1)}ms\n`);
 }
 
