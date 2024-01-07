@@ -1,8 +1,9 @@
+import { el } from './dom.mjs';
+
 export class GridPreview {
   constructor(rules = { rows: [[]], cols: [[]] }) {
     this.enhancementSteps = 2;
-    this.canvas = document.createElement('canvas');
-    this.canvas.className = 'grid-preview';
+    this.canvas = el('canvas', { 'class': 'grid-preview' });
     this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });
     this.setRules(rules);
   }

@@ -1,4 +1,5 @@
 import { UNKNOWN, ON, OFF } from '../src/constants.mjs';
+import { el } from './dom.mjs';
 
 export class GridView extends EventTarget {
   constructor({ width = 0, height = 0, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
@@ -14,8 +15,7 @@ export class GridView extends EventTarget {
     this.marks = [];
     this.tiles = [];
 
-    this.canvas = document.createElement('canvas');
-    this.canvas.className = 'grid-view';
+    this.canvas = el('canvas', { 'class': 'grid-view' });
     this.canvas.width = this.cw;
     this.canvas.height = this.ch;
     this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });

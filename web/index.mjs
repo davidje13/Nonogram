@@ -1,17 +1,15 @@
-import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
 import { debounce } from '../src/util/debounce.mjs';
-import { compileGame, rulesForImage, extractRules } from '../src/game.mjs';
-import { AmbiguousError } from '../src/solver/errors.mjs';
+import { extractRules } from '../src/game.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { LiveSolver } from '../src/solver/LiveSolver.mjs';
-import { compressImage, decompressImage } from '../src/export/image.mjs';
 import { compressRules, decompressRules } from '../src/export/rules.mjs';
-import { Resizer } from './Resizer.mjs';
-import { GridView } from './GridView.mjs';
 import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
+import { StateStore } from './StateStore.mjs';
+import { el, makeButton } from './dom.mjs';
+import { Editor } from './Editor.mjs';
 
-const root = document.createElement('div');
+const root = el('div');
 document.body.append(root);
 
 const player = new GamePlayer({
@@ -21,33 +19,13 @@ const player = new GamePlayer({
   hinter: new LiveSolver(),
 });
 
-const playerTitle = document.createElement('h2');
-playerTitle.textContent = '';
+const playerTitle = el('h2', {}, ['']);
 let playerID = null;
-
-function save(id, grid) {
-  try {
-    window.localStorage.setItem(`game-${id}`, compressImage(grid));
-  } catch (e) {
-    console.warn('failed to save', e);
-  }
-}
-
-function load(id) {
-  try {
-    const data = window.localStorage.getItem(`game-${id}`);
-    if (data) {
-      return decompressImage(data);
-    }
-  } catch (e) {
-    console.warn('failed to load', e);
-  }
-  return null;
-}
+const stateStore = new StateStore();
 
 const debouncedSave = debounce(() => {
   if (playerID) {
-    save(playerID, player.getGrid());
+    stateStore.save(playerID, player.getGrid());
   }
 }, 500);
 
@@ -65,7 +43,7 @@ function checkHash() {
   if (compressedRules !== playerID) {
     debouncedSave.cancel();
     if (playerID) {
-      save(playerID, player.getGrid());
+      stateStore.save(playerID, player.getGrid());
       playerID = null;
     }
     if (!compressedRules) {
@@ -75,7 +53,7 @@ function checkHash() {
     const rules = decompressRules(compressedRules);
 
     player.setRules(rules);
-    const grid = load(compressedRules);
+    const grid = stateStore.load(compressedRules);
     if (grid) {
       player.setGrid(grid);
     } else {
@@ -87,98 +65,12 @@ function checkHash() {
 
 window.addEventListener('hashchange', checkHash);
 
-const info = document.createElement('div');
-const definition = document.createElement('pre');
-definition.className = 'definition';
-
-const liveSolver = new LiveSolver();
-
-const editor = document.createElement('div');
-editor.className = 'editor';
-const editorTitle = document.createElement('h2');
-editorTitle.textContent = 'Editor';
-
-const editorView = new GridView({
-  width: 5,
-  height: 5,
-  cellWidth: 23,
-  cellHeight: 23,
-  fill: OFF,
-  getChange: (v, alt) => alt ? null : (v === ON ? OFF : ON),
+const editor = new Editor({ width: 5, height: 5, cellWidth: 23, cellHeight: 23 });
+editor.addEventListener('play', (e) => {
+  window.location.href = `#${new URLSearchParams({ name: 'New game', rules: e.detail.rules })}`;
 });
 
-liveSolver.addEventListener('begin', () => {
-  info.textContent = 'Checking game\u2026';
-  editorView.clearMarked();
-});
-
-liveSolver.addEventListener('complete', ({ detail }) => {
-  if (!detail.error) {
-    info.textContent = 'Game is valid.';
-  } else if (detail.error instanceof AmbiguousError) {
-    const cells = [];
-    for (let i = 0; i < detail.board.length; ++i) {
-      if (detail.board[i] === UNKNOWN) {
-        cells.push(i);
-      }
-    }
-    editorView.mark('cells', cells);
-    info.textContent = 'Game is ambiguous.';
-  } else {
-    console.error(detail.error);
-    info.textContent = 'Error checking game.';
-  }
-});
-
-const preview = new GridPreview();
-
-const editorChanged = () => {
-  const rules = rulesForImage(editorView.getGrid());
-  preview.setRules(rules);
-  definition.textContent = compressRules(rules);
-  liveSolver.solveInBackground(compileGame(rules));
-};
-
-editorView.addEventListener('change', editorChanged);
-
-function makeButton(text, fn) {
-  const btn = document.createElement('button');
-  btn.setAttribute('type', 'button');
-  btn.textContent = text;
-  btn.addEventListener('click', fn);
-  return btn;
-}
-
-const options = document.createElement('div');
-options.className = 'options';
-options.append(
-  makeButton('clear', () => editorView.fill(OFF)),
-  makeButton('play', () => {
-    const rules = compressRules(rulesForImage(editorView.getGrid()));
-    window.location.href = `#${new URLSearchParams({ name: 'New game', rules })}`;
-  }),
-);
-
-const editorResizer = new Resizer(editorView.canvas, {
-  getCurrentSize: () => editorView.getGrid(),
-  xScale: editorView.getTotalCellSize().width,
-  yScale: editorView.getTotalCellSize().height,
-  xMin: 1,
-  yMin: 1,
-});
-
-editorResizer.addEventListener('change', ({ detail }) => editorView.resize({
-  width: detail.width,
-  height: detail.height,
-  dx: detail.dx,
-  dy: detail.dy,
-  fill: OFF,
-}));
-
-editor.append(editorTitle, options, editorResizer.container, info, preview.canvas, definition);
-
-const gameList = document.createElement('div');
-gameList.className = 'game-list';
+const gameList = el('div', { 'class': 'game-list' });
 const currentGames = new Set();
 
 function addGame(compressedRules, name) {
@@ -187,15 +79,13 @@ function addGame(compressedRules, name) {
   }
   currentGames.add(compressedRules);
 
-  const row = document.createElement('a');
-  row.className = 'row';
-  row.setAttribute('href', `#${new URLSearchParams({ name, rules: compressedRules })}`);
-  const label = document.createElement('div');
-  label.className = 'label';
-  label.textContent = name;
-  const preview = new GridPreview(decompressRules(compressedRules));
-  row.append(preview.canvas, label);
-  gameList.append(row);
+  gameList.append(el('a', {
+    'class': 'row',
+    href: `#${new URLSearchParams({ name, rules: compressedRules })}`,
+  }, [
+    new GridPreview(decompressRules(compressedRules)).canvas,
+    el('div', { 'class': 'label' }, [name])
+  ]));
 }
 
 window.addEventListener('dragover', (e) => {
@@ -218,17 +108,13 @@ window.addEventListener('drop', async (e) => {
   }
 });
 
-const playOptions = document.createElement('div');
-playOptions.className = 'options';
-playOptions.append(
-  makeButton('hint', () => player.hint()),
-);
-
 root.append(
-  editor,
+  editor.container,
   playerTitle,
   player.container,
-  playOptions,
+  el('div', { 'class': 'options' }, [
+    makeButton('hint', () => player.hint()),
+  ]),
   gameList,
 );
 
@@ -246,5 +132,4 @@ for (const { name, rules } of games) {
   addGame(rules, name);
 }
 
-editorChanged();
 checkHash();

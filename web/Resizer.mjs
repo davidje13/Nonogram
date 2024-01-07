@@ -1,3 +1,5 @@
+import { el } from './dom.mjs';
+
 const DIRECTIONS = [
   { className: 'n', x: 0, y: -1 },
   { className: 'w', x: -1, y: 0 },
@@ -32,8 +34,7 @@ export class Resizer extends EventTarget {
     this.yMax = yMax;
     this.dragState = null;
 
-    this.container = document.createElement('div');
-    this.container.className = 'resizer';
+    this.container = el('div', { 'class': 'resizer' });
 
     this._md = this._md.bind(this);
     this._mm = this._mm.bind(this);
@@ -42,21 +43,15 @@ export class Resizer extends EventTarget {
 
     this.handles = [];
     for (let i = 0; i < DIRECTIONS.length; ++i) {
-      const handle = document.createElement('div');
-      handle.className = `handle ${DIRECTIONS[i].className}`;
+      const handle = el('div', { 'class': `handle ${DIRECTIONS[i].className}` });
       handle.dataset.resizeIndex = i;
       handle.addEventListener('pointerdown', this._md, { passive: false });
       this.container.append(handle);
       this.handles.push(handle);
     }
-    this.previewLabel = document.createElement('div');
-    this.previewLabel.className = 'label';
-    this.preview = document.createElement('div');
-    this.preview.className = 'preview';
-    this.preview.append(this.previewLabel);
-    this.wrapper = document.createElement('div');
-    this.wrapper.className = 'wrapper';
-    this.wrapper.append(content, this.preview);
+    this.previewLabel = el('div', { 'class': 'label' });
+    this.preview = el('div', { 'class': 'preview' }, [this.previewLabel]);
+    this.wrapper = el('div', { 'class': 'wrapper' }, [content, this.preview]);
     this.container.append(this.wrapper);
   }
 

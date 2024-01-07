@@ -1,11 +1,11 @@
 import { UNKNOWN, OFF, ON } from '../src/constants.mjs';
 import { compileGame } from '../src/game.mjs';
 import { GridView } from './GridView.mjs';
+import { el } from './dom.mjs';
 
 class RulesView {
   constructor({ cellSize, border, align, ruleChecker = null }) {
-    this.container = document.createElement('div');
-    this.container.className = `rules align-${align}`;
+    this.container = el('div', { 'class': `rules align-${align}` });
     this.container.style.setProperty('--cellSize', `${cellSize}px`);
     this.container.style.setProperty('--border', `${border}px`);
     this._ruleChecker = ruleChecker;
@@ -16,21 +16,17 @@ class RulesView {
     this.container.textContent = '';
     this._rules.length = 0;
     for (const rule of rules) {
-      const els = document.createElement('div');
+      const els = el('div');
       let total = 0;
       let checker = null;
       if (rule) {
         for (const v of rule.length > 0 ? rule : [0]) {
-          const el = document.createElement('div');
-          el.textContent = String(v);
-          els.append(el);
+          els.append(el('div', {}, [String(v)]));
           total += v;
         }
         checker = this._ruleChecker?.(rule);
       } else {
-        const el = document.createElement('div');
-        el.textContent = '?';
-        els.append(el);
+        els.append(el('div', {}, ['?']));
       }
       this.container.append(els);
       this._rules.push({ dom: els, total, checker });
@@ -87,14 +83,12 @@ export class GamePlayer extends EventTarget {
       getChange: (v, alt) => alt ? (v === OFF ? UNKNOWN : OFF) : (v === ON ? UNKNOWN : ON),
     });
     this._display.addEventListener('change', this._change.bind(this));
-    this.container = document.createElement('div');
-    this.container.className = 'game-player';
-    this.container.append(
-      document.createElement('div'),
+    this.container = el('div', { 'class': 'game-player' }, [
+      el('div'),
       this._rulesT.container,
       this._rulesL.container,
       this._display.canvas,
-    );
+    ]);
   }
 
   setRules(rules) {
