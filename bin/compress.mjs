@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 
 import { compileGame, extractRules } from '../src/game.mjs';
 import { UNKNOWN } from '../src/constants.mjs';
-import { toShortByImage, toShortByRules } from '../src/export.mjs';
+import { compressImage } from '../src/export/image.mjs';
+import { compressRules } from '../src/export/rules.mjs';
 import { solver } from '../src/solver/solver.mjs';
 import { implications } from '../src/solver/methods/implications.mjs';
 import { fork } from '../src/solver/methods/fork.mjs';
@@ -26,9 +27,9 @@ function run(gameFile) {
   const game = compileGame(rules);
   const board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
 
-  const compressedRules = toShortByRules(game);
+  const compressedRules = compressRules(game);
   fastSolver(game.rules).solve(board);
-  const compressedImage = toShortByImage(game, board);
+  const compressedImage = compressImage({ width: game.w, height: game.h, data: board });
 
   totalRules += compressedRules.length;
   totalImage += compressedImage.length;

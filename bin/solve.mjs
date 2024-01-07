@@ -6,7 +6,8 @@ import { performance } from 'node:perf_hooks';
 import { drawGameBoard } from '../src/draw.mjs';
 import { compileGame, extractRules } from '../src/game.mjs';
 import { UNKNOWN } from '../src/constants.mjs';
-import { toShortByImage, toShortByRules } from '../src/export.mjs';
+import { compressImage } from '../src/export/image.mjs';
+import { compressRules } from '../src/export/rules.mjs';
 import { solver } from '../src/solver/solver.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
 import { implications } from '../src/solver/methods/implications.mjs';
@@ -54,9 +55,9 @@ function run(gameFile) {
   }
 
   process.stdout.write(`\n`);
-  process.stdout.write(`Short image: ${toShortByImage(game, board)}\n`);
+  process.stdout.write(`Short image: ${compressImage({ width: game.w, height: game.h, data: board })}\n`);
   try {
-    process.stdout.write(`Short rules: ${toShortByRules(game)}\n`);
+    process.stdout.write(`Short rules: ${compressRules(game)}\n`);
   } catch {}
   process.stdout.write(`Solving time: ${(tmEnd - tmBegin).toFixed(1)}ms\n`);
 }

@@ -11,6 +11,8 @@ export class Huffman {
       this.symbols.values().next().value.length = 0;
     }
 
+    this.sorted = [];
+
     const v = [];
     // shorter codes first (sort is stable so order of elements is otherwise maintained)
     for (const symbol of [...this.symbols.values()].sort((a, b) => a.length - b.length)) {
@@ -28,6 +30,7 @@ export class Huffman {
         v.push(0);
       }
       symbol.pattern = [...v];
+      this.sorted.push(symbol);
     }
   }
 
@@ -79,12 +82,35 @@ export class Huffman {
     return new Huffman(Huffman.frequenciesToLengths(symbolFrequencies));
   }
 
-  write(value) {
+  write(encoder, value) {
     const symbol = this.symbols.get(value);
     if (!symbol) {
       throw new Error(`unknown symbol ${value}`);
     }
-    return symbol.pattern;
+    encoder.writeBits(symbol.pattern);
+  }
+
+  read(decoder) {
+    let from = 0;
+    let to = this.sorted.length;
+    for (let i = 0; to > from + 1; ++i) {
+      let p1 = from;
+      let p2 = to;
+      while (p2 > p1) {
+        const p = (p1 + p2) >>> 1;
+        if (this.sorted[p].pattern[i]) {
+          p2 = p;
+        } else {
+          p1 = p + 1;
+        }
+      }
+      if (decoder.readBit()) {
+        from = p1;
+      } else {
+        to = p1;
+      }
+    }
+    return this.sorted[from].value;
   }
 
   toString() {

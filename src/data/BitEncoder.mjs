@@ -1,4 +1,4 @@
-const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+import { B64 } from './base64.mjs';
 
 export class BitEncoder {
   constructor() {
@@ -52,27 +52,4 @@ export class BitEncoder {
       mask >>= 1;
     }
   }
-
-  writeExpGolomb(value, k = 0) {
-    if (value < 0) {
-      throw new Error(`value ${value} out of bounds (positive integer)`);
-    }
-    const a = (value >>> k) + 1;
-    const bits = bitLength(a);
-    for (let i = 0; i < bits - 1; ++ i) {
-      this.writeBit(0);
-    }
-    this.writeBinary(a, bits);
-    if (k) {
-      this.writeBinary(value & ((1 << k) - 1), k);
-    }
-  }
-}
-
-function bitLength(v) {
-  let n = 0;
-  for (; v; v >>>= 1) {
-    ++n;
-  }
-  return n;
 }

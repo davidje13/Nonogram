@@ -1,13 +1,16 @@
 export const debounce = (fn, delay) => {
   let tm = null;
+  let run = null;
   const wrapped = (...args) => {
     if (tm) {
       clearTimeout(tm);
     }
-    tm = setTimeout(() => {
+    run = () => {
       tm = null;
+      run = null;
       fn(...args);
-    }, delay);
+    };
+    tm = setTimeout(run, delay);
   };
   wrapped.cancel = () => {
     if (tm) {
@@ -18,8 +21,7 @@ export const debounce = (fn, delay) => {
   wrapped.immediate = () => {
     if (tm) {
       clearTimeout(tm);
-      tm = null;
-      fn(...args);
+      run();
     }
   };
   return wrapped;
