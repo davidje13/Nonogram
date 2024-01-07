@@ -44,8 +44,11 @@ export function decompressImageL(decoder) {
     const hIndex = huff.read(decoder);
     const index = hIndex + ((previous !== null && hIndex >= previous) ? 1 : 0);
     const v = alphabet[index];
-    const run = imageRunFormat.read(decoder) + 1;
-    for (let runTo = i + run; i < runTo; ++i) {
+    const runTo = i + imageRunFormat.read(decoder) + 1;
+    if (runTo > size) {
+      throw new Error('invalid run');
+    }
+    for (; i < runTo; ++i) {
       data[i] = v;
     }
     previous = index;

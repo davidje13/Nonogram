@@ -2,6 +2,7 @@ import { ExpGolomb } from '../data/ExpGolomb.mjs';
 import { Huffman, Rational } from '../data/Huffman.mjs';
 
 const sizeFormat = new ExpGolomb(4);
+const MAX_SIZE = 1000;
 
 export function writeSize(encoder, w, h) {
   sizeFormat.write(encoder, w);
@@ -11,6 +12,9 @@ export function writeSize(encoder, w, h) {
 export function readSize(decoder) {
   const width = sizeFormat.read(decoder);
   const height = sizeFormat.read(decoder);
+  if (width > MAX_SIZE || height > MAX_SIZE) {
+    throw new Error('unsupported size');
+  }
   return { width, height };
 }
 
