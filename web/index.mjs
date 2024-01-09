@@ -3,14 +3,24 @@ import { extractRules } from '../src/game.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { LiveSolver } from '../src/solver/LiveSolver.mjs';
 import { compressRules, decompressRules } from '../src/export/rules.mjs';
+import { compressImage } from '../src/export/image.mjs';
 import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
 import { StateStore } from './StateStore.mjs';
 import { el, makeButton } from './dom.mjs';
-import { Editor } from './Editor.mjs';
+import { Router } from './Router.mjs';
+import { EditorPage } from './EditorPage.mjs';
 
-const root = el('div');
-document.body.append(root);
+function makePage(content, title, l, r) {
+  return el('div', { 'class': 'page' }, [
+    el('nav', {}, [
+      el('div', {}, l),
+      el('h1', {}, [title]),
+      el('div', {}, r),
+    ]),
+    content,
+  ]);
+}
 
 const player = new GamePlayer({
   cellSize: 23,
@@ -18,59 +28,42 @@ const player = new GamePlayer({
   ruleChecker: perlRegexp,
   hinter: new LiveSolver(),
 });
+const playerTitle = el('span');
+let playerBackTarget = {};
+const playerBack = makeButton('back to list', () => router.go(playerBackTarget));
+const playerDOM = makePage(
+  el('div', { 'class': 'center' }, [player.container]),
+  playerTitle,
+  [playerBack],
+  [makeButton('hint', () => player.hint())],
+);
 
-const playerTitle = el('h2', {}, ['']);
-let playerID = null;
-const stateStore = new StateStore();
-
-const debouncedSave = debounce(() => {
-  if (playerID) {
-    stateStore.save(playerID, player.getGrid());
-  }
-}, 500);
-
-player.addEventListener('change', debouncedSave);
-window.addEventListener('blur', debouncedSave.immediate);
-window.addEventListener('visibilitychange', debouncedSave.immediate);
-window.addEventListener('beforeunload', debouncedSave.immediate, { passive: true });
-
-function checkHash() {
-  const params = new URLSearchParams(window.location.hash.substring(1));
-  const name = params.get('name') || 'Nonogram';
-  playerTitle.textContent = name;
-
-  const compressedRules = params.get('rules');
-  if (compressedRules !== playerID) {
-    debouncedSave.cancel();
-    if (playerID) {
-      stateStore.save(playerID, player.getGrid());
-      playerID = null;
-    }
-    if (!compressedRules) {
-      player.setRules({ rows: [], cols: [] });
-      return;
-    }
-    const rules = decompressRules(compressedRules);
-
-    player.setRules(rules);
-    const grid = stateStore.load(compressedRules);
-    if (grid) {
-      player.setGrid(grid);
-    } else {
-      player.clear();
-    }
-    playerID = compressedRules;
-  }
-}
-
-window.addEventListener('hashchange', checkHash);
-
-const editor = new Editor({ width: 5, height: 5, cellWidth: 23, cellHeight: 23 });
-editor.addEventListener('play', (e) => {
-  window.location.href = `#${new URLSearchParams({ name: 'New game', rules: e.detail.rules })}`;
-});
+const editor = new EditorPage({ width: 5, height: 5, cellWidth: 23, cellHeight: 23 });
+const editorDOM = makePage(
+  el('div', { 'class': 'center' }, [editor.container]),
+  'Nonogram editor',
+  [
+    makeButton('back to list', () => router.go({})),
+    makeButton('clear', () => editor.clear()),
+  ],
+  [
+    el('div', { 'class': 'validation' }, [editor.validation]),
+    makeButton('play', () => router.go({
+      name: 'New game',
+      rules: compressRules(editor.getRules()),
+      editor: compressImage(editor.getGrid()),
+    })),
+  ],
+);
 
 const gameList = el('div', { 'class': 'game-list' });
+const listDOM = makePage(
+  gameList,
+  'Nonograms',
+  [],
+  [makeButton('+ new', () => router.go({ editor: '' }))],
+);
+
 const currentGames = new Set();
 
 function addGame(compressedRules, name) {
@@ -79,9 +72,10 @@ function addGame(compressedRules, name) {
   }
   currentGames.add(compressedRules);
 
+  // TODO: https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver
   gameList.append(el('a', {
-    'class': 'row',
-    href: `#${new URLSearchParams({ name, rules: compressedRules })}`,
+    'class': 'item',
+    href: router.makeLink({ name, rules: compressedRules }),
   }, [
     new GridPreview(decompressRules(compressedRules)).canvas,
     el('div', { 'class': 'label' }, [name])
@@ -108,15 +102,73 @@ window.addEventListener('drop', async (e) => {
   }
 });
 
-root.append(
-  editor.container,
-  playerTitle,
-  player.container,
-  el('div', { 'class': 'options' }, [
-    makeButton('hint', () => player.hint()),
-  ]),
-  gameList,
-);
+let playerID = null;
+const stateStore = new StateStore();
+
+const debouncedSave = debounce(() => {
+  if (playerID) {
+    stateStore.save(playerID, player.getGrid());
+  }
+}, 500);
+
+player.addEventListener('change', debouncedSave);
+window.addEventListener('blur', debouncedSave.immediate);
+window.addEventListener('visibilitychange', debouncedSave.immediate);
+window.addEventListener('beforeunload', debouncedSave.immediate, { passive: true });
+
+const router = new Router(document.body, [
+  ({ rules: compressedRules, name, editor }) => {
+    if (!compressedRules) {
+      return null;
+    }
+    const rules = decompressRules(compressedRules);
+
+    player.setRules(rules);
+    const grid = stateStore.load(compressedRules);
+    if (grid) {
+      player.setGrid(grid);
+    } else {
+      player.clear();
+    }
+    playerID = compressedRules;
+
+    const title = name ?? 'Nonogram';
+    playerTitle.textContent = title;
+
+    if (editor) {
+      playerBack.textContent = 'back to editor';
+      playerBackTarget = { editor };
+    } else {
+      playerBack.textContent = 'back to list';
+      playerBackTarget = {};
+    }
+
+    return {
+      element: playerDOM,
+      title,
+      unmount: () => {
+        debouncedSave.immediate();
+        playerID = null;
+      },
+    };
+  },
+  ({ editor }) => {
+    if (editor === undefined) {
+      return null;
+    }
+
+    return {
+      element: editorDOM,
+      title: 'Editor',
+    };
+  },
+  () => {
+    return {
+      element: listDOM,
+      title: 'Nonogram',
+    };
+  },
+]);
 
 const games = [
   { name: 'dice', rules: 'R_9TaWbQJuBWBkFAgtNLXRr4IKBBBwAgkUCVBrw' }, // davidje13 CC BY-SA
@@ -131,5 +183,3 @@ games.sort((a, b) => a.name > b.name ? 1 : -1);
 for (const { name, rules } of games) {
   addGame(rules, name);
 }
-
-checkHash();

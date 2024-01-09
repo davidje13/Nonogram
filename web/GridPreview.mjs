@@ -3,7 +3,7 @@ import { el } from './dom.mjs';
 export class GridPreview {
   constructor(rules = { rows: [[]], cols: [[]] }) {
     this.enhancementSteps = 2;
-    this.canvas = el('canvas', { 'class': 'grid-preview' });
+    this.canvas = el('canvas');
     this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });
     this.setRules(rules);
   }
@@ -13,6 +13,14 @@ export class GridPreview {
     const h = rules.rows.length;
     this.canvas.width = w;
     this.canvas.height = h;
+
+    if (w > h) {
+      this.canvas.classList.add('primary-x');
+      this.canvas.classList.remove('primary-y');
+    } else {
+      this.canvas.classList.add('primary-y');
+      this.canvas.classList.remove('primary-x');
+    }
 
     let nx = w;
     let ny = h;
