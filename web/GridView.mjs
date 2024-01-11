@@ -124,12 +124,14 @@ export class GridView extends EventTarget {
     if (width <= 0 || height <= 0) {
       throw new Error('invalid size');
     }
-    this.w = width;
-    this.h = height;
-    this.values = new Uint8Array(this.w * this.h);
+    if (this.w !== width || this.h !== height) {
+      this.w = width;
+      this.h = height;
+      this.values = new Uint8Array(this.w * this.h);
+      this._updateDisplaySize();
+    }
     this.marks.length = 0;
     this.values.set(data, 0);
-    this._updateDisplaySize();
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
     this.dirty = true;
     Promise.resolve().then(() => this.draw());

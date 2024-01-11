@@ -81,8 +81,10 @@ const vis = new IntersectionObserver((entries) => {
     }
     if (entry.isIntersecting && !game.loaded) {
       const { state, grid } = stateStore.load(compressedRules);
-      if (grid?.data.includes(ON)) {
-        game.preview.setImage(grid);
+      if (state === STATE_DONE) {
+        game.preview.setImage(grid, true);
+      } else if (grid?.data.includes(ON)) {
+        game.preview.setImage(grid, false);
       } else {
         game.preview.setRules(decompressRules(compressedRules));
       }

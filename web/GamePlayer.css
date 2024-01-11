@@ -21,6 +21,7 @@
 
 .game-player .rules .done {
   color: #AACC80;
+  cursor: pointer;
 }
 
 .game-player .rules .error {

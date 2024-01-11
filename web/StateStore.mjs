@@ -20,7 +20,7 @@ export class StateStore {
     try {
       const data = new URLSearchParams(window.localStorage.getItem(id) ?? '');
       return {
-        state: data.has('i') ? (data.get('s') ?? STATE_STARTED) : STATE_UNSTARTED,
+        state: data.has('i') ? Number(data.get('s') ?? STATE_STARTED) : STATE_UNSTARTED,
         grid: data.has('i') ? decompressImage(data.get('i')) : null,
       };
     } catch (e) {

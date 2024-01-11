@@ -3,39 +3,79 @@ import { compileGame } from '../src/game.mjs';
 import { GridView } from './GridView.mjs';
 import { el } from './dom.mjs';
 
-class RulesView {
+const STATE_INCOMPLETE = 0;
+const STATE_INVALID = 1;
+const STATE_COMPLETE = 2;
+
+class RulesView extends EventTarget {
   constructor({ cellSize, border, align, ruleChecker = null }) {
+    super();
     this.container = el('div', { 'class': `rules align-${align}` });
     this.container.style.setProperty('--cellSize', `${cellSize}px`);
     this.container.style.setProperty('--border', `${border}px`);
     this._ruleChecker = ruleChecker;
     this._rules = [];
+
+    this._onClick = this._on.bind(this, 'click');
+    this._onDblClick = this._on.bind(this, 'dblclick');
+    this.container.addEventListener('click', this._onClick);
+    this.container.addEventListener('dblclick', this._onDblClick);
+  }
+
+  destroy() {
+    this.container.removeEventListener('click', this._onClick);
+    this.container.removeEventListener('dblclick', this._onDblClick);
+  }
+
+  _on(type, e) {
+    e.preventDefault();
+    const ruleIndex = Number(e.target.dataset['rule'] ?? '-1');
+    if (ruleIndex === -1) {
+      return;
+    }
+    const { state } = this._rules[ruleIndex];
+    const numberIndex = Number(e.target.dataset['index'] ?? '0');
+    this.dispatchEvent(new CustomEvent(type, { detail: { raw: e, ruleIndex, numberIndex, state } }));
   }
 
   setRules(rules) {
-    this.container.textContent = '';
+    for (const { dom } of this._rules) {
+      this.container.removeChild(dom);
+    }
     this._rules.length = 0;
     for (const rule of rules) {
       const els = el('div');
+      els.dataset['rule'] = this._rules.length;
       let total = 0;
       let checker = null;
       if (rule) {
         for (const v of rule.length > 0 ? rule : [0]) {
-          els.append(el('div', {}, [String(v)]));
+          const item = el('div', {}, [String(v)]);
+          item.dataset['rule'] = this._rules.length;
+          item.dataset['index'] = els.length;
+          els.append(item);
           total += v;
         }
         checker = this._ruleChecker?.(rule);
       } else {
-        els.append(el('div', {}, ['?']));
+        const item = el('div', {}, ['?']);
+        item.dataset['rule'] = this._rules.length;
+        item.dataset['index'] = 0;
+        els.append(item);
       }
       this.container.append(els);
-      this._rules.push({ dom: els, total, checker });
+      this._rules.push({ dom: els, total, checker, state: STATE_INCOMPLETE });
     }
+  }
+
+  isComplete() {
+    return this._rules.every((r) => r.state === STATE_COMPLETE);
   }
 
   check(i, boardLine) {
     const r = this._rules[i];
     if (!r || !r.checker) {
+      r.state = STATE_COMPLETE;
       return;
     }
     const solution = new Uint8Array(boardLine);
@@ -47,8 +87,11 @@ class RulesView {
           ++n;
         }
       }
-      r.dom.className = (n === r.total ? 'done' : '');
+      const done = n === r.total;
+      r.state = done ? STATE_COMPLETE : STATE_INCOMPLETE;
+      r.dom.className = (done ? 'done' : '');
     } catch {
+      r.state = STATE_INVALID;
       r.dom.className = 'error';
     }
   }
@@ -89,6 +132,22 @@ export class GamePlayer extends EventTarget {
       this._rulesL.container,
       this._display.canvas,
     ]);
+    this._rulesT.addEventListener('click', (e) => {
+      if (e.detail.state === STATE_COMPLETE) {
+        this.completeColumn(e.detail.ruleIndex);
+      }
+    });
+    this._rulesL.addEventListener('click', (e) => {
+      if (e.detail.state === STATE_COMPLETE) {
+        this.completeRow(e.detail.ruleIndex);
+      }
+    });
+  }
+
+  destroy() {
+    this._rulesL.destroy();
+    this._rulesT.destroy();
+    this._display.destroy();
   }
 
   setRules(rules) {
@@ -98,10 +157,12 @@ export class GamePlayer extends EventTarget {
     this._rulesL.setRules(rules.rows);
     this._rulesT.setRules(rules.cols);
     this._display.resize({ width: this._width, height: this._height });
+    this._complete = false;
   }
 
   clear() {
     this._display.fill(UNKNOWN);
+    this._complete = false;
   }
 
   isStarted() {
@@ -109,19 +170,53 @@ export class GamePlayer extends EventTarget {
   }
 
   isComplete() {
-    return false; // TODO
+    return this._complete;
   }
 
-  checkColumn(i, board) {
-    const col = new Uint8Array(this._height);
+  _columnIndices(i) {
+    const indices = [];
     for (let j = 0; j < this._height; ++j) {
-      col[j] = board[j * this._width + i];
+      indices.push(j * this._width + i);
     }
-    this._rulesT.check(i, col);
+    return indices;
   }
 
-  checkRow(i, board) {
-    this._rulesL.check(i, board.subarray(i * this._width, (i + 1) * this._width));
+  _rowIndices(i) {
+    const indices = [];
+    for (let j = 0; j < this._width; ++j) {
+      indices.push(i * this._width + j);
+    }
+    return indices;
+  }
+
+  completeColumn(i) {
+    const grid = this._display.getGrid();
+    for (const index of this._columnIndices(i)) {
+      if (grid.data[index] === UNKNOWN) {
+        grid.data[index] = OFF;
+      }
+    }
+    this._display.setGrid(grid);
+  }
+
+  completeRow(i) {
+    const grid = this._display.getGrid();
+    for (const index of this._rowIndices(i)) {
+      if (grid.data[index] === UNKNOWN) {
+        grid.data[index] = OFF;
+      }
+    }
+    this._display.setGrid(grid);
+  }
+
+  checkColumn(i) {
+    const board = this._display.getGrid().data;
+    this._rulesT.check(i, this._columnIndices(i).map((index) => board[index]));
+  }
+
+  checkRow(i) {
+    const board = this._display.getGrid().data;
+    this._rulesL.check(i, this._rowIndices(i).map((index) => board[index]));
   }
 
   getGrid() {
@@ -135,29 +230,34 @@ export class GamePlayer extends EventTarget {
     this._display.setGrid(grid);
   }
 
-  _change({ detail: { data, x, y } }) {
+  _change({ detail: { x, y } }) {
     this._hintLevel = 0;
     this._hinting = false;
     this._display.clearMarked();
     if (x === undefined) {
       for (let i = 0; i < this._width; ++i) {
-        this.checkColumn(i, data);
+        this.checkColumn(i);
       }
     } else {
-      this.checkColumn(x, data);
+      this.checkColumn(x);
     }
     if (y === undefined) {
       for (let i = 0; i < this._height; ++i) {
-        this.checkRow(i, data);
+        this.checkRow(i);
       }
     } else {
-      this.checkRow(y, data);
+      this.checkRow(y);
     }
+    const wasComplete = this._complete;
+    this._complete = this._rulesL.isComplete() && this._rulesT.isComplete();
     this.dispatchEvent(new CustomEvent('change'));
+    if (this._complete && !wasComplete) {
+      this.dispatchEvent(new CustomEvent('complete'));
+    }
   }
 
   async hint() {
-    if (this._hinting || !this._hinter) {
+    if (this._hinting || !this._hinter || this._complete) {
       return false;
     }
     const level = this._hintLevel;

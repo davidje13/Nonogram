@@ -68,15 +68,14 @@ nav > h1 {
 }
 
 .game-list .item {
-  background: #FFFFFF;
   border: 2px solid #000000;
   width: 100px;
   height: 100px;
   text-decoration: none;
 }
 
-.game-list .item .done {
-  border-color: #00CC00;
+.game-list .item.done {
+  border-color: #006600;
 }
 
 .game-list .item:hover, .game-list .item:active {
@@ -93,6 +92,10 @@ nav > h1 {
   height: 100%;
   background: #FFFFFF;
   overflow: hidden;
+}
+
+.game-list .item.done .preview {
+  background: #DDFFCC;
 }
 
 .preview .fuzzy {

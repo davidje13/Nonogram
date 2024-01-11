@@ -110,15 +110,20 @@ export class GridPreview {
     this.ctx.putImageData(dat, 0, 0);
   }
 
-  setImage({ width, height, data }) {
+  setImage({ width, height, data }, binary = false) {
     this._prepareCanvas(width, height);
     this.ctx.canvas.className = 'image';
+
+    const lookup = [];
+    lookup[OFF] = 0;
+    lookup[ON] = 255;
+    const unknown = binary ? 0 : 64;
 
     const dat = this.ctx.createImageData(width, height);
     for (let y = 0; y < height; ++y) {
       for (let x = 0; x < width; ++x) {
         const p = y * width + x;
-        dat.data[p * 4 + 3] = data[p] === ON ? 255 : data[p] === OFF ? 0 : 64;
+        dat.data[p * 4 + 3] = lookup[data[p]] ?? unknown;
       }
     }
     this.ctx.putImageData(dat, 0, 0);
