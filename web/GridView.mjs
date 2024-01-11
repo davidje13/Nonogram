@@ -2,7 +2,7 @@ import { UNKNOWN, ON, OFF } from '../src/constants.mjs';
 import { el } from './dom.mjs';
 
 export class GridView extends EventTarget {
-  constructor({ width = 0, height = 0, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
+  constructor({ width = 0, height = 0, majorX = 5, majorY = 5, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
     super();
     this.w = 0;
     this.h = 0;
@@ -11,6 +11,8 @@ export class GridView extends EventTarget {
     this.getChange = getChange;
     this.border = 1;
     this.displayScale = 1;
+    this.majorX = majorX;
+    this.majorY = majorY;
     this.values = new Uint8Array(0);
     this.marks = [];
     this.tiles = [];
@@ -230,6 +232,19 @@ export class GridView extends EventTarget {
 
     this.ctx.fillStyle = '#C0C0C0';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.ctx.fillStyle = '#666666';
+    if (this.majorX) {
+      for (let x = 0; x <= w; x += this.majorX) {
+        this.ctx.fillRect(x * (cw + border), 0, border, this.canvas.height);
+      }
+    }
+    if (this.majorY) {
+      for (let y = 0; y <= h; y += this.majorY) {
+        this.ctx.fillRect(0, y * (ch + border), this.canvas.width, border);
+      }
+    }
+
     for (let y = 0; y < h; ++y) {
       const yy = y * (ch + border) + border;
       for (let x = 0; x < w; ++x) {

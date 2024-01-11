@@ -50,8 +50,8 @@ export class Resizer extends EventTarget {
       this.handles.push(handle);
     }
     this.previewLabel = el('div', { 'class': 'label' });
-    this.preview = el('div', { 'class': 'preview' }, [this.previewLabel]);
-    this.wrapper = el('div', { 'class': 'wrapper' }, [content, this.preview]);
+    this.preview = el('div', { 'class': 'resize-preview' }, [this.previewLabel]);
+    this.wrapper = el('div', { 'class': 'resize-wrapper' }, [content, this.preview]);
     this.container.append(this.wrapper);
   }
 

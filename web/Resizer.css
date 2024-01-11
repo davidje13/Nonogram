@@ -13,11 +13,11 @@
   padding: calc(var(--resize-gap) + var(--resize-width) + var(--resize-pad));
 }
 
-.resizer > .wrapper {
+.resize-wrapper {
   position: relative;
 }
 
-.resizer > .wrapper > .preview {
+.resize-preview {
   display: none;
   pointer-events: none;
   position: absolute;
@@ -28,7 +28,7 @@
   z-index: 1;
 }
 
-.resizer > .wrapper > .preview > .label {
+.resize-preview > .label {
   position: relative;
   top: calc(0.5em + 2px);
   font: 0.8rem sans-serif;
