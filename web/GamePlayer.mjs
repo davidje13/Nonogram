@@ -104,6 +104,14 @@ export class GamePlayer extends EventTarget {
     this._display.fill(UNKNOWN);
   }
 
+  isStarted() {
+    return this._display.getGrid().data.includes(ON);
+  }
+
+  isComplete() {
+    return false; // TODO
+  }
+
   checkColumn(i, board) {
     const col = new Uint8Array(this._height);
     for (let j = 0; j < this._height; ++j) {

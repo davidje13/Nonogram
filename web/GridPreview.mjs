@@ -1,31 +1,60 @@
+import { OFF, ON } from '../src/constants.mjs';
 import { el } from './dom.mjs';
 
+const CONTEXT_POOL = [];
+
+function getContext() {
+  if (CONTEXT_POOL.length) {
+    return CONTEXT_POOL.pop();
+  }
+  const canvas = el('canvas');
+  return canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+}
+
 export class GridPreview {
-  constructor(rules = { rows: [[]], cols: [[]] }) {
+  constructor(className = '') {
     this.enhancementSteps = 2;
-    this.canvas = el('canvas');
-    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });
-    this.setRules(rules);
+    this.ctx = null;
+    this.container = el('div', { 'class': className });
   }
 
-  setRules(rules) {
-    const w = rules.cols.length;
-    const h = rules.rows.length;
-    this.canvas.width = w;
-    this.canvas.height = h;
-
-    if (w > h) {
-      this.canvas.classList.add('primary-x');
-      this.canvas.classList.remove('primary-y');
-    } else {
-      this.canvas.classList.add('primary-y');
-      this.canvas.classList.remove('primary-x');
+  clear() {
+    if (this.ctx) {
+      this.ctx.canvas.width = 0;
+      this.ctx.canvas.height = 0;
+      this.ctx.canvas.remove();
+      CONTEXT_POOL.push(this.ctx);
+      this.ctx = null;
     }
+  }
+
+  _prepareCanvas(w, h) {
+    if (!this.ctx) {
+      this.ctx = getContext();
+      this.container.append(this.ctx.canvas);
+    }
+
+    this.ctx.canvas.width = w;
+    this.ctx.canvas.height = h;
+    if (w > h) {
+      this.ctx.canvas.style.width = '100%';
+      this.ctx.canvas.style.height = 'auto';
+    } else {
+      this.ctx.canvas.style.width = 'auto';
+      this.ctx.canvas.style.height = '100%';
+    }
+  }
+
+  setRules({ rows, cols }) {
+    const w = cols.length;
+    const h = rows.length;
+    this._prepareCanvas(w, h);
+    this.ctx.canvas.className = 'fuzzy';
 
     let nx = w;
     let ny = h;
-    const xSums = rules.cols.map(sum);
-    const ySums = rules.rows.map(sum);
+    const xSums = cols.map(sum);
+    const ySums = rows.map(sum);
 
     const ps = [];
     for (let i = 0; i < w * h; ++i) {
@@ -76,6 +105,20 @@ export class GridPreview {
         const p = y * w + x;
         const d = ps[p] ?? combineP((xSums[x] ?? 0.5) * my, sy);
         dat.data[p * 4 + 3] = (d * 255 + 0.5)|0;
+      }
+    }
+    this.ctx.putImageData(dat, 0, 0);
+  }
+
+  setImage({ width, height, data }) {
+    this._prepareCanvas(width, height);
+    this.ctx.canvas.className = 'image';
+
+    const dat = this.ctx.createImageData(width, height);
+    for (let y = 0; y < height; ++y) {
+      for (let x = 0; x < width; ++x) {
+        const p = y * width + x;
+        dat.data[p * 4 + 3] = data[p] === ON ? 255 : data[p] === OFF ? 0 : 64;
       }
     }
     this.ctx.putImageData(dat, 0, 0);

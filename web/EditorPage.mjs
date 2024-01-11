@@ -73,7 +73,7 @@ export class EditorPage {
 
     this.container = editorResizer.container;
     this.validation = validation;
-    this.preview = preview.canvas;
+    this.preview = preview.container;
 
     editorChanged();
   }

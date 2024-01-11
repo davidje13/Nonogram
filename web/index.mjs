@@ -6,10 +6,11 @@ import { compressRules, decompressRules } from '../src/export/rules.mjs';
 import { compressImage } from '../src/export/image.mjs';
 import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
-import { StateStore } from './StateStore.mjs';
+import { STATE_DONE, STATE_STARTED, STATE_UNSTARTED, StateStore } from './StateStore.mjs';
 import { el, makeButton } from './dom.mjs';
 import { Router } from './Router.mjs';
 import { EditorPage } from './EditorPage.mjs';
+import { ON } from '../src/constants.mjs';
 
 function makePage(content, title, l, r) {
   return el('div', { 'class': 'page' }, [
@@ -64,22 +65,50 @@ const listDOM = makePage(
   [makeButton('+ new', () => router.go({ editor: '' }))],
 );
 
-const currentGames = new Set();
+const currentGames = new Map();
+const ITEM_CLASSES = {
+  [STATE_DONE]: 'done',
+  [STATE_STARTED]: 'started',
+  [STATE_UNSTARTED]: 'unstarted',
+};
 
+const vis = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    const compressedRules = entry.target.dataset['r'];
+    const game = currentGames.get(compressedRules);
+    if (!game) {
+      throw new Error(`no game ${compressedRules}`);
+    }
+    if (entry.isIntersecting && !game.loaded) {
+      const { state, grid } = stateStore.load(compressedRules);
+      if (grid?.data.includes(ON)) {
+        game.preview.setImage(grid);
+      } else {
+        game.preview.setRules(decompressRules(compressedRules));
+      }
+      game.item.className = `item ${ITEM_CLASSES[state]}`;
+      game.loaded = true;
+    }
+    if (!entry.isIntersecting && game.loaded) {
+      game.preview.clear();
+      game.loaded = false;
+    }
+  }
+});
 function addGame(compressedRules, name) {
   if (currentGames.has(compressedRules)) {
     return;
   }
-  currentGames.add(compressedRules);
 
-  // TODO: https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver
-  gameList.append(el('a', {
+  const preview = new GridPreview('preview');
+  const item = el('a', {
     'class': 'item',
     href: router.makeLink({ name, rules: compressedRules }),
-  }, [
-    new GridPreview(decompressRules(compressedRules)).canvas,
-    el('div', { 'class': 'label' }, [name])
-  ]));
+  }, [preview.container, el('div', { 'class': 'label' }, [name])]);
+  item.dataset['r'] = compressedRules;
+  currentGames.set(compressedRules, { item, preview, loaded: false });
+  gameList.append(item);
+  vis.observe(item);
 }
 
 window.addEventListener('dragover', (e) => {
@@ -93,21 +122,56 @@ window.addEventListener('drop', async (e) => {
     .map((item) => item.getAsFile());
 
   for (const file of files) {
+    const content = await file.text();
     try {
-      const definition = JSON.parse(await file.text());
-      addGame(compressRules(extractRules(definition)), definition.name || definition.description || file.name);
+      readGames(content, ({ compressedRules, name }) => addGame(compressedRules, name || file.name));
     } catch (e) {
       console.error(e);
     }
   }
 });
 
+function readGames(content, callback) {
+  if (content[0] === '{') {
+    const definition = JSON.parse(content);
+    callback({
+      compressedRules: compressRules(extractRules(definition)),
+      name: definition.name || definition.description,
+    });
+    return;
+  }
+
+  const [head, ...lines] = content.split('\n')
+    .map((ln) => ln.replace(/#.*/, '').trim())
+    .filter((ln) => ln)
+    .map((ln) => ln.split(','));
+  const headers = head.map((v) => v.toLowerCase());
+  const nameIndex = headers.indexOf('name');
+  const rulesIndex = headers.indexOf('rules');
+  if (rulesIndex === -1) {
+    throw new Error('no rules column');
+  }
+  for (let i = 0; i < lines.length; ++i) {
+    const compressedRules = lines[i][rulesIndex];
+    const name = nameIndex === -1 ? `#${i}` : lines[i][nameIndex];
+    if (compressedRules) {
+      callback({ compressedRules, name });
+    }
+  }
+}
+
 let playerID = null;
 const stateStore = new StateStore();
 
 const debouncedSave = debounce(() => {
   if (playerID) {
-    stateStore.save(playerID, player.getGrid());
+    stateStore.save(
+      playerID,
+      player.isComplete() ? STATE_DONE
+        : player.isStarted() ? STATE_STARTED
+        : STATE_UNSTARTED,
+      player.getGrid(),
+    );
   }
 }, 500);
 
@@ -124,7 +188,7 @@ const router = new Router(document.body, [
     const rules = decompressRules(compressedRules);
 
     player.setRules(rules);
-    const grid = stateStore.load(compressedRules);
+    const { grid } = stateStore.load(compressedRules);
     if (grid) {
       player.setGrid(grid);
     } else {
