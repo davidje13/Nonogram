@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
+import { readInputRules } from './input.mjs';
 import { drawGameBoard } from '../src/draw.mjs';
-import { compileGame, extractRules } from '../src/game.mjs';
+import { compileGame } from '../src/game.mjs';
 import { UNKNOWN } from '../src/constants.mjs';
 import { compressImage } from '../src/export/image.mjs';
 import { compressRules } from '../src/export/rules.mjs';
@@ -21,8 +21,8 @@ const fastSolver = solver(
   fork({ parallel: false }),
 );
 
-function run(gameFile) {
-  const rules = extractRules(JSON.parse(readFileSync(gameFile)));
+for (const { name, rules } of readInputRules()) {
+  process.stdout.write(`\nSolving ${name}\n`);
   const game = compileGame(rules);
   const board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
 
@@ -60,14 +60,4 @@ function run(gameFile) {
     process.stdout.write(`Short rules: ${compressRules(game)}\n`);
   } catch {}
   process.stdout.write(`Solving time: ${(tmEnd - tmBegin).toFixed(1)}ms\n`);
-}
-
-if (process.argv.length < 3) {
-  run(process.stdin.fd);
-} else {
-  for (let i = 2; i < process.argv.length; ++ i) {
-    const gameFile = process.argv[i];
-    process.stdout.write(`\nSolving ${gameFile}\n`);
-    run(gameFile);
-  }
 }

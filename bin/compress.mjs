@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
-
-import { compileGame, extractRules } from '../src/game.mjs';
+import { readInputRules } from './input.mjs';
+import { compileGame } from '../src/game.mjs';
 import { UNKNOWN } from '../src/constants.mjs';
 import { compressImage } from '../src/export/image.mjs';
 import { compressRules } from '../src/export/rules.mjs';
@@ -22,28 +21,22 @@ let totalRules = 0;
 let totalImage = 0;
 let total = 0;
 
-function run(gameFile) {
-  const rules = extractRules(JSON.parse(readFileSync(gameFile)));
-  const game = compileGame(rules);
-  const board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
-
-  const compressedRules = compressRules(game);
-  fastSolver(game.rules).solve(board);
-  const compressedImage = compressImage({ width: game.w, height: game.h, data: board });
-
-  totalRules += compressedRules.length;
-  totalImage += compressedImage.length;
-  ++total;
-
-  process.stdout.write(`- rules: ${compressedRules}\n`);
-  process.stdout.write(`- image: ${compressedImage}\n`);
-}
-
-for (let i = 2; i < process.argv.length; ++ i) {
-  const gameFile = process.argv[i];
-  process.stdout.write(`${gameFile}:\n`);
+for (const { name, rules } of readInputRules()) {
   try {
-    run(gameFile);
+    process.stdout.write(`\nCompressing ${name}\n`);
+    const game = compileGame(rules);
+    const board = new Uint8Array(game.w * game.h).fill(UNKNOWN);
+
+    const compressedRules = compressRules(game);
+    fastSolver(game.rules).solve(board);
+    const compressedImage = compressImage({ width: game.w, height: game.h, data: board });
+
+    totalRules += compressedRules.length;
+    totalImage += compressedImage.length;
+    ++total;
+
+    process.stdout.write(`- rules: ${compressedRules}\n`);
+    process.stdout.write(`- image: ${compressedImage}\n`);
   } catch (e) {
     process.stdout.write(`- error: ${e}\n`);
   }

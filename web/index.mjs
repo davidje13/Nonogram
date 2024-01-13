@@ -11,6 +11,7 @@ import { el, makeButton } from './dom.mjs';
 import { Router } from './Router.mjs';
 import { EditorPage } from './EditorPage.mjs';
 import { ON } from '../src/constants.mjs';
+import { readCSV } from '../src/data/csv.mjs';
 
 function makePage(content, title, l, r) {
   return el('div', { 'class': 'page' }, [
@@ -155,19 +156,9 @@ function readGames(content, callback) {
     return;
   }
 
-  const [head, ...lines] = content.split('\n')
-    .map((ln) => ln.replace(/#.*/, '').trim())
-    .filter((ln) => ln)
-    .map((ln) => ln.split(','));
-  const headers = head.map((v) => v.toLowerCase());
-  const nameIndex = headers.indexOf('name');
-  const rulesIndex = headers.indexOf('rules');
-  if (rulesIndex === -1) {
-    throw new Error('no rules column');
-  }
-  for (let i = 0; i < lines.length; ++i) {
-    const compressedRules = lines[i][rulesIndex];
-    const name = nameIndex === -1 ? `#${i}` : lines[i][nameIndex];
+  for (const item of readCSV(content)) {
+    const compressedRules = item.get('rules');
+    const name = item.get('name') ?? `#${item.get('row')}`;
     if (compressedRules) {
       callback({ compressedRules, name });
     }
