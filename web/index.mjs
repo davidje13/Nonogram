@@ -3,7 +3,7 @@ import { extractRules } from '../src/game.mjs';
 import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
 import { LiveSolver } from '../src/solver/LiveSolver.mjs';
 import { compressRules, decompressRules } from '../src/export/rules.mjs';
-import { compressImage } from '../src/export/image.mjs';
+import { compressImage, decompressImage } from '../src/export/image.mjs';
 import { GridPreview } from './GridPreview.mjs';
 import { GamePlayer } from './GamePlayer.mjs';
 import { STATE_DONE, STATE_STARTED, STATE_UNSTARTED, StateStore } from './StateStore.mjs';
@@ -48,12 +48,24 @@ const editorDOM = makePage(
     makeButton('clear', () => editor.clear()),
   ],
   [
-    el('div', { 'class': 'validation' }, [editor.validation]),
+    editor.validation,
     makeButton('play', () => router.go({
       name: 'New game',
       rules: compressRules(editor.getRules()),
       editor: compressImage(editor.getGrid()),
     })),
+    makeButton('copy', async (e) => {
+      const btn = e.currentTarget;
+      try {
+        await navigator.clipboard.writeText(compressRules(editor.getRules()));
+        btn.textContent = '\u2713';
+        setTimeout(() => {
+          btn.textContent = 'copy';
+        }, 2000);
+      } catch (e) {
+        console.warn(e);
+      }
+    }),
   ],
 );
 
@@ -218,9 +230,20 @@ const router = new Router(document.body, [
       },
     };
   },
-  ({ editor }) => {
-    if (editor === undefined) {
+  ({ editor: compressedBitmap }) => {
+    if (compressedBitmap === undefined) {
       return null;
+    }
+
+    if (compressedBitmap) {
+      try {
+        editor.setGrid(decompressImage(compressedBitmap));
+      } catch (e) {
+        console.warn(e);
+        editor.clear();
+      }
+    } else {
+      editor.clear();
     }
 
     return {

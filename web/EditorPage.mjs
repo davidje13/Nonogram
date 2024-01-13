@@ -9,7 +9,7 @@ import { el } from './dom.mjs';
 
 export class EditorPage {
   constructor({ width, height, cellWidth, cellHeight }) {
-    const validation = el('div');
+    const validation = el('div', { 'class': 'validation' });
 
     this.editorView = new GridView({
       width,
@@ -24,12 +24,14 @@ export class EditorPage {
 
     liveSolver.addEventListener('begin', () => {
       validation.textContent = 'Checking game\u2026';
+      validation.className = 'validation checking';
       this.editorView.clearMarked();
     });
 
     liveSolver.addEventListener('complete', ({ detail }) => {
       if (!detail.error) {
         validation.textContent = 'Game is valid.';
+        validation.className = 'validation valid';
       } else if (detail.error instanceof AmbiguousError) {
         const cells = [];
         for (let i = 0; i < detail.board.length; ++i) {
@@ -39,9 +41,11 @@ export class EditorPage {
         }
         this.editorView.mark('cells', cells);
         validation.textContent = 'Game is ambiguous.';
+        validation.className = 'validation ambiguous';
       } else {
         console.error(detail.error);
         validation.textContent = 'Error checking game.';
+        validation.className = 'validation error';
       }
     });
 
@@ -84,6 +88,10 @@ export class EditorPage {
 
   getGrid() {
     return this.editorView.getGrid();
+  }
+
+  setGrid(grid) {
+    this.editorView.setGrid(grid);
   }
 
   getRules() {

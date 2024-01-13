@@ -54,6 +54,26 @@ nav > h1 {
   text-align: center;
 }
 
+nav button {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  min-width: 4rem;
+  padding: 1px 10px;
+  background: #EEEEEE;
+  border: 1px solid #808080;
+  border-radius: 100px;
+}
+
+nav button:focus, nav button:hover {
+  background: #F8F8F8;
+  border-color: #333333;
+}
+
+nav button:active:hover {
+  background: #DDDDDD;
+  border-color: #000000;
+}
+
 .center {
   align-self: center;
   justify-self: center;
@@ -118,4 +138,26 @@ nav > h1 {
   font-size: 0.8rem;
   text-align: center;
   overflow-wrap: break-word;
+}
+
+.validation {
+  position: absolute;
+  font-size: 0.8rem;
+  line-height: 1;
+  bottom: calc(-1em - 3px);
+  right: 10px;
+  padding: 3px 10px 3px 15px;
+  background: #F1F1F1;
+  border: 1px solid #C3C3C3;
+  border-radius: 100px;
+}
+
+.validation.valid {
+  background: #DBF1DE;
+  border-color: #A3B7A6;
+}
+
+.validation.ambiguous, .validation.error {
+  background: #F1DEDB;
+  border-color: #B6A7A3;
 }
