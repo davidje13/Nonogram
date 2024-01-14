@@ -28,4 +28,18 @@ export class StateStore {
     }
     return { state: STATE_UNSTARTED, grid: null };
   }
+
+  async persist() {
+    if (await navigator.storage.persisted()) {
+      return true;
+    }
+    const request = Date.now();
+    if (await navigator.storage.persist()) {
+      return true;
+    }
+    if (Date.now() < request + 100) {
+      throw new Error('browser refused persistence');
+    }
+    throw new Error('user refused persistence');
+  }
 }

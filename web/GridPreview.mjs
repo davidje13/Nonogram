@@ -20,8 +20,6 @@ export class GridPreview {
 
   clear() {
     if (this.ctx) {
-      this.ctx.canvas.width = 0;
-      this.ctx.canvas.height = 0;
       this.ctx.canvas.remove();
       CONTEXT_POOL.push(this.ctx);
       this.ctx = null;

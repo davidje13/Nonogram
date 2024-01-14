@@ -94,13 +94,18 @@ const vis = new IntersectionObserver((entries) => {
     }
     if (entry.isIntersecting && !game.loaded) {
       const { state, grid } = stateStore.load(compressedRules);
-      if (state === STATE_DONE) {
-        game.preview.setImage(grid, true);
-      } else if (grid?.data.includes(ON)) {
-        game.preview.setImage(grid, false);
-      } else {
-        game.preview.setRules(decompressRules(compressedRules));
-      }
+      window.requestIdleCallback(() => {
+        if (!game.loaded) {
+          return;
+        }
+        if (state === STATE_DONE) {
+          game.preview.setImage(grid, true);
+        } else if (grid?.data.includes(ON)) {
+          game.preview.setImage(grid, false);
+        } else {
+          game.preview.setRules(decompressRules(compressedRules));
+        }
+      }, { timeout: 1000 });
       game.item.className = `item ${ITEM_CLASSES[state]}`;
       game.loaded = true;
     }
@@ -184,6 +189,14 @@ player.addEventListener('change', debouncedSave);
 window.addEventListener('blur', debouncedSave.immediate);
 window.addEventListener('visibilitychange', debouncedSave.immediate);
 window.addEventListener('beforeunload', debouncedSave.immediate, { passive: true });
+
+player.addEventListener('complete', async () => {
+  try {
+    await stateStore.persist();
+  } catch (e) {
+    console.warn(e);
+  }
+});
 
 const router = new Router(document.body, [
   ({ rules: compressedRules, name, editor }) => {
