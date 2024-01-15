@@ -1,13 +1,25 @@
-# Nonogram solver
+# Nonogram
 
-Uses repeated applications of a 1D solver to solve nonograms (also known as picross).
-Falls-back to guessing and checking for contradictions if the 1D solver is unable to
-make progress on its own.
+A nonogram (also known as picross) solver and web player.
+
+Includes an editor with automatic detection of ambiguous games, and a player with
+the ability to show hints.
+
+Solving uses various techniques: the simplest applies a 1D solver to each rule in
+turn (described below). If this cannot make progress, a map of direct implications
+is created and traversed to find obvious contradictions and tautologies. If this
+also fails to resolve any squares, the solver falls back to forking the game state
+by setting a cell to both ON and OFF, and continuing each branch until a
+contradiction is found on one of them (or, if no contradictions are found on either
+branch, it marks the game as ambiguous).
+
+When offering hints, several 'simpler' methods are also used, with their results
+being preferred as easier for players to understand.
 
 ## Running
 
 ```bash
-./src/index.js games/football.json
+./bin/solve.mjs games/football.json
 ```
 
 > ```
@@ -38,14 +50,18 @@ make progress on its own.
 >           3                   ## ## ##
 >         2 1                   ## ##    ##
 >
-> Short image: 5uYAOAAHwAB0AAZAA7vAzH8_RAeMwACIAByAAfgGP4D86As0gB5TgA9sAOdAHDgDgAA0AA
-> Short rules: 5uaSyUhJmiIxMFKiBSUwIxMJRiFKWSogmUmSSEgYIkiSVIUViBZZIwomc25gliCHEmYIohgiEiBE
-> Solving time: 76.4ms
+> Short image: LSJGLQRYQShD41JJX_QjekiFT8-SPTj3J0IIfSiK_ri16tDFuy00opFQpBLos
+> Short rules: RSJH58Z7Dnyl9tWtZGp7r8XqjLwdrazUm-812Xl5kSoFuEelf7b7FW0LhH2lo-VloqQ
+> Solving time: 140.1ms
 > ```
 
-## Method
+## Methods
 
-The 1D solver will resolve all possible cells based soely on one rule at a time.
+### Isolated Rules
+
+The `isolated-rules` solver will resolve all possible cells based soely on one rule at
+a time. The `perl-regexp` sub-solver will resolve all possible state from an individual
+rule.
 
 The method is similar to a regular expression. At a high-level, each rule compiles to a
 regular expression which is applied to the current state of the row or column using a
@@ -104,8 +120,60 @@ For example:
    ```
 6. The output is `iyyyiiyi`.
 
-This method is unable to use information from more than one rule at a time; for that the
-solver falls back to splitting into 2 games; one with a cell on and one with it off. Both
-games are advanced and if either results in a contradiction, the other must be correct.
-If both games result in a successful output, the game is ambiguous and both states are
-printed.
+As this solver only considers one rule at a time, it can get stuck in various
+situations. When more than one rule is needed to make progress, another solver
+is required;
+
+### Implications
+
+The `implications` solver will build a map of all the implications which can be
+resolved from considering one rule at a time:
+
+```
+(2,3) = ON  => (8,3) = OFF
+(2,3) = OFF => (2,2) = OFF
+(5,6) = ON  => (5,7) = ON
+etc.
+```
+
+This map is built using a 1D solver, as described above.
+
+It will then traverse the resulting graph looking for contradictions. For example:
+
+```
+(1,1) = ON  => (1,2) = ON
+(1,2) = ON  => (2,2) = ON
+(1,1) = ON  => (2,1) = ON
+(2,1) = ON  => (2,2) = OFF
+```
+
+If a graph contained these implications, cell (1,1) cannot be ON, as it would
+cause a contradiction in cell (2,2). As a result, the rule marks cell (1,1) as
+OFF.
+
+In some cases, it may also find tautologies. For example:
+
+```
+(1,1) = ON  => (1,2) = OFF
+(1,2) = OFF => (2,2) = OFF
+(1,1) = OFF => (2,1) = ON
+(2,1) = ON  => (2,2) = OFF
+```
+
+In this case, cell (2,2) must be OFF regardless of the value of cell (1,1).
+
+The graph is searched to a configurable depth (infinite by default), but cannot
+account for situations where two pieces of information in the same row or column
+must be taken together to infer a third. For such situations, the final solver is
+required;
+
+### Fork
+
+The `fork` solver is used as a last resort if no other solvers can make progress.
+It picks an unknown cell which is likely to have a large impact on the game when
+resolved as ON or OFF, and splits the game into 2: one with the cell marked ON,
+and one with it marked OFF. Both branches then continue to be solved (and may
+split again recursively) until one of them reaches a conflict. The game then
+continues with the state from the other branch.
+
+If both branches complete without a conflict, the game is ambiguous.
