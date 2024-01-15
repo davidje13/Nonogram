@@ -4,57 +4,38 @@ import { el } from './dom.mjs';
 export class GridView extends EventTarget {
   constructor({ width = 0, height = 0, majorX = 5, majorY = 5, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
     super();
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.w = 0;
     this.h = 0;
-    this.cw = cellWidth;
-    this.ch = cellHeight;
+    this.lastw = -1;
+    this.lasth = -1;
+    this.cw = cellWidth * this.dpr;
+    this.ch = cellHeight * this.dpr;
     this.getChange = getChange;
-    this.border = 1;
-    this.displayScale = 1;
+    this.border = 1 * this.dpr;
     this.majorX = majorX;
     this.majorY = majorY;
     this.values = new Uint8Array(0);
     this.marks = [];
-    this.tiles = [];
+    this.tiles = null;
+    this.dirty = false;
+    this.updating = null;
 
     this.canvas = el('canvas', { 'class': 'grid-view' });
-    this.canvas.width = this.cw;
-    this.canvas.height = this.ch;
-    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: true });
+    this.ctx = this.canvas.getContext('2d', { alpha: true, willReadFrequently: false });
 
-    this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(0, 0, this.cw, this.ch);
-    this.tiles[ON] = this.ctx.getImageData(0, 0, this.cw, this.ch);
-
-    this.ctx.fillStyle = '#EEEEEE';
-    this.ctx.fillRect(0, 0, this.cw, this.ch);
-    this.tiles[UNKNOWN] = this.ctx.getImageData(0, 0, this.cw, this.ch);
-
-    this.ctx.strokeStyle = '#808080';
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.cw * 0.25, this.ch * 0.25);
-    this.ctx.lineTo(this.cw * 0.75, this.ch * 0.75);
-    this.ctx.moveTo(this.cw * 0.25, this.ch * 0.75);
-    this.ctx.lineTo(this.cw * 0.75, this.ch * 0.25);
-    this.ctx.stroke();
-    this.tiles[OFF] = this.ctx.getImageData(0, 0, this.cw, this.ch);
-
-    this.dirty = true;
-    this.resize({ width, height, fill });
-
-    this.updating = null;
     this._md = this._md.bind(this);
     this._mm = this._mm.bind(this);
     this._mu = this._mu.bind(this);
 
     this.canvas.addEventListener('pointerdown', this._md);
     this.canvas.addEventListener('contextmenu', this._prevent);
+
+    this.resize({ width, height, fill });
   }
 
   destroy() {
+    this.dirty = false;
     this.canvas.removeEventListener('pointerdown', this._md);
     this.canvas.removeEventListener('contextmenu', this._prevent);
     window.removeEventListener('pointermove', this._mm);
@@ -67,8 +48,8 @@ export class GridView extends EventTarget {
 
   _getCell(e) {
     const bounds = this.canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - bounds.left - this.border * 0.5) / (this.cw + this.border));
-    const y = Math.floor((e.clientY - bounds.top - this.border * 0.5) / (this.ch + this.border));
+    const x = Math.floor(((e.clientX - bounds.left) * this.dpr - this.border * 0.5) / (this.cw + this.border));
+    const y = Math.floor(((e.clientY - bounds.top) * this.dpr - this.border * 0.5) / (this.ch + this.border));
     if (x < 0 || x >= this.w || y < 0 || y >= this.h) {
       return null;
     }
@@ -128,27 +109,24 @@ export class GridView extends EventTarget {
       this.w = width;
       this.h = height;
       this.values = new Uint8Array(this.w * this.h);
-      this._updateDisplaySize();
     }
     this.marks.length = 0;
     this.values.set(data, 0);
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
-    this.dirty = true;
-    Promise.resolve().then(() => this.draw());
+    this._markDirty();
   }
 
   getTotalCellSize() {
     return {
-      width: (this.cw + this.border) * this.displayScale,
-      height: (this.ch + this.border) * this.displayScale,
+      width: (this.cw + this.border) / this.dpr,
+      height: (this.ch + this.border) / this.dpr,
     };
   }
 
   fill(fill = UNKNOWN) {
     this.values.fill(fill);
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
-    this.dirty = true;
-    Promise.resolve().then(() => this.draw());
+    this._markDirty();
   }
 
   setCell(x, y, value) {
@@ -156,16 +134,14 @@ export class GridView extends EventTarget {
     if (this.values[p] !== value) {
       this.values[p] = value;
       this.dispatchEvent(new CustomEvent('change', { detail: { ...this.getGrid(), x, y } }));
-      this.dirty = true;
-      Promise.resolve().then(() => this.draw());
+      this._markDirty();
     }
   }
 
   clearMarked() {
     if (this.marks.length) {
       this.marks.length = 0;
-      this.dirty = true;
-      Promise.resolve().then(() => this.draw());
+      this._markDirty();
     }
   }
 
@@ -177,17 +153,7 @@ export class GridView extends EventTarget {
       type,
       cells: cells.map((c) => typeof c === 'number' ? { x: c % this.w, y: (c / this.w)|0 } : c),
     });
-    this.dirty = true;
-    Promise.resolve().then(() => this.draw());
-  }
-
-  _updateDisplaySize() {
-    const fullWidth = this.w * (this.cw + this.border) + this.border;
-    const fullHeight = this.h * (this.ch + this.border) + this.border;
-    this.canvas.width = fullWidth;
-    this.canvas.height = fullHeight;
-    this.canvas.style.width = `${fullWidth * this.displayScale}px`;
-    this.canvas.style.height = `${fullHeight * this.displayScale}px`;
+    this._markDirty();
   }
 
   resize({ width = null, height = null, fill = UNKNOWN, dx = 0, dy = 0 }) {
@@ -218,13 +184,51 @@ export class GridView extends EventTarget {
         }
       }
     }
-    this._updateDisplaySize();
     this.dispatchEvent(new CustomEvent('change', { detail: this.getGrid() }));
-    this.dirty = true;
-    this.draw();
+    this._markDirty();
   }
 
-  draw() {
+  async _init() {
+    const { cw, ch } = this;
+    this.canvas.width = cw * 4;
+    this.canvas.height = ch;
+    this.lastw = -1;
+    this.lasth = -1;
+
+    this.ctx.fillStyle = '#000000';
+    this.ctx.fillRect(cw * ON, 0, cw, ch);
+    this.ctx.fillStyle = '#EEEEEE';
+    this.ctx.fillRect(cw * OFF, 0, cw, ch);
+    this.ctx.fillRect(cw * UNKNOWN, 0, cw, ch);
+    this.ctx.strokeStyle = '#808080';
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.lineWidth = 0.6 * this.dpr;
+    this.ctx.beginPath();
+    this.ctx.moveTo(cw * OFF + cw * 0.25, ch * 0.25);
+    this.ctx.lineTo(cw * OFF + cw * 0.75, ch * 0.75);
+    this.ctx.moveTo(cw * OFF + cw * 0.25, ch * 0.75);
+    this.ctx.lineTo(cw * OFF + cw * 0.75, ch * 0.25);
+    this.ctx.stroke();
+
+    this.tiles = await createImageBitmap(this.canvas, 0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  _markDirty() {
+    if (!this.dirty) {
+      this.dirty = true;
+      Promise.resolve().then(() => this._draw());
+    }
+  }
+
+  async _draw() {
+    if (!this.tiles) {
+      if (this.initialising) {
+        return;
+      }
+      this.initialising = true;
+      await this._init();
+    }
     if (!this.dirty) {
       return;
     }
@@ -232,18 +236,29 @@ export class GridView extends EventTarget {
 
     const { w, h, cw, ch, border } = this;
 
+    const fullWidth = w * (cw + border) + border;
+    const fullHeight = h * (ch + border) + border;
+    if (this.lastw !== fullWidth || this.lasth !== fullHeight) {
+      this.canvas.width = fullWidth;
+      this.canvas.height = fullHeight;
+      this.canvas.style.width = `${fullWidth / this.dpr}px`;
+      this.canvas.style.height = `${fullHeight / this.dpr}px`;
+      this.lastw = fullWidth;
+      this.lasth = fullHeight;
+    }
+
     this.ctx.fillStyle = '#C0C0C0';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, fullWidth, fullHeight);
 
     this.ctx.fillStyle = '#666666';
     if (this.majorX) {
       for (let x = 0; x <= w; x += this.majorX) {
-        this.ctx.fillRect(x * (cw + border), 0, border, this.canvas.height);
+        this.ctx.fillRect(x * (cw + border), 0, border, fullHeight);
       }
     }
     if (this.majorY) {
       for (let y = 0; y <= h; y += this.majorY) {
-        this.ctx.fillRect(0, y * (ch + border), this.canvas.width, border);
+        this.ctx.fillRect(0, y * (ch + border), fullWidth, border);
       }
     }
 
@@ -252,7 +267,7 @@ export class GridView extends EventTarget {
       for (let x = 0; x < w; ++x) {
         const state = this.values[y * w + x];
         const xx = x * (cw + border) + border;
-        this.ctx.putImageData(this.tiles[state], xx, yy);
+        this.ctx.drawImage(this.tiles, state * cw, 0, cw, ch, xx, yy, cw, ch);
       }
     }
 
@@ -263,7 +278,7 @@ export class GridView extends EventTarget {
           this.ctx.strokeStyle = '#FF0000';
           this.ctx.lineCap = 'round';
           this.ctx.lineJoin = 'round';
-          this.ctx.lineWidth = Math.max(r * 2, 3);
+          this.ctx.lineWidth = Math.max(r * 2, 3 * this.dpr);
           for (const { x, y } of mark.cells) {
             this.ctx.strokeRect(x * (cw + border) + border - r, y * (ch + border) + border - r, cw + r * 2, ch + r * 2);
           }
@@ -280,18 +295,18 @@ export class GridView extends EventTarget {
             const xx = x * (cw + border) + border + cw * 0.5;
             const yy = y * (ch + border) + border + ch * 0.5;
             if (i === 0) {
-              this.ctx.lineWidth = 10;
+              this.ctx.lineWidth = 10 * this.dpr;
               this.ctx.beginPath();
               this.ctx.moveTo(xx, yy);
               this.ctx.lineTo(xx, yy);
               this.ctx.stroke();
             } else {
-              this.ctx.lineWidth = 2;
+              this.ctx.lineWidth = 2 * this.dpr;
               this.ctx.beginPath();
               this.ctx.moveTo(prevX, prevY);
               this.ctx.lineTo(xx, yy);
               this.ctx.stroke();
-              this.ctx.lineWidth = i === mark.cells.length - 1 ? 6 : 4;
+              this.ctx.lineWidth = (i === mark.cells.length - 1 ? 6 : 4) * this.dpr;
               this.ctx.beginPath();
               this.ctx.moveTo(xx, yy);
               this.ctx.lineTo(xx, yy);
