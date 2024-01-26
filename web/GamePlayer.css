@@ -46,3 +46,7 @@
 .game-player .rules.align-bottom > div, .game-player .rules.align-right > div {
   justify-content: flex-end;
 }
+
+.game-player .grid-view {
+  grid-area: 2 / 2;
+}

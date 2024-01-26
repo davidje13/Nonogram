@@ -103,9 +103,11 @@ export class GamePlayer extends EventTarget {
     this._width = 0;
     this._height = 0;
     this._rules = { rows: [], cols: [] };
+    this._complete = false;
     this._hinter = hinter;
     this._hintLevel = 0;
     this._hinting = false;
+    this._readonly = false;
     this._rulesT = new RulesView({
       cellSize,
       border,
@@ -133,11 +135,17 @@ export class GamePlayer extends EventTarget {
       this._display.canvas,
     ]);
     this._rulesT.addEventListener('click', (e) => {
+      if (this._readonly) {
+        return;
+      }
       if (e.detail.state === STATE_COMPLETE) {
         this.completeColumn(e.detail.ruleIndex);
       }
     });
     this._rulesL.addEventListener('click', (e) => {
+      if (this._readonly) {
+        return;
+      }
       if (e.detail.state === STATE_COMPLETE) {
         this.completeRow(e.detail.ruleIndex);
       }
@@ -157,12 +165,16 @@ export class GamePlayer extends EventTarget {
     this._rulesL.setRules(rules.rows);
     this._rulesT.setRules(rules.cols);
     this._display.resize({ width: this._width, height: this._height });
-    this._complete = false;
+  }
+
+  setReadOnly(readonly = true) {
+    this._readonly = readonly;
+    this._display.setReadOnly(readonly);
   }
 
   clear() {
     this._display.fill(UNKNOWN);
-    this._complete = false;
+    this._display.clearMarked();
   }
 
   isStarted() {
@@ -230,10 +242,14 @@ export class GamePlayer extends EventTarget {
     this._display.setGrid(grid);
   }
 
-  _change({ detail: { x, y } }) {
+  clearHints() {
     this._hintLevel = 0;
     this._hinting = false;
     this._display.clearMarked();
+  }
+
+  _change({ detail: { x, y } }) {
+    this.clearHints();
     if (x === undefined) {
       for (let i = 0; i < this._width; ++i) {
         this.checkColumn(i);
@@ -250,6 +266,7 @@ export class GamePlayer extends EventTarget {
     }
     const wasComplete = this._complete;
     this._complete = this._rulesL.isComplete() && this._rulesT.isComplete();
+    this.container.classList.toggle('complete', this._complete);
     this.dispatchEvent(new CustomEvent('change'));
     if (this._complete && !wasComplete) {
       this.dispatchEvent(new CustomEvent('complete'));

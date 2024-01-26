@@ -19,6 +19,7 @@ export class GridView extends EventTarget {
     this.marks = [];
     this.tiles = null;
     this.dirty = false;
+    this._readonly = false;
     this.updating = null;
 
     this.canvas = el('canvas', { 'class': 'grid-view' });
@@ -36,10 +37,10 @@ export class GridView extends EventTarget {
   }
 
   _removePointerEvents() {
-    window.removeEventListener('pointermove', this._mm);
-    window.removeEventListener('pointerup', this._mu);
-    window.removeEventListener('pointercancel', this._mc);
     if (this.updating) {
+      window.removeEventListener('pointermove', this._mm);
+      window.removeEventListener('pointerup', this._mu);
+      window.removeEventListener('pointercancel', this._mc);
       this.canvas.releasePointerCapture(this.updating.pointer);
       this.updating = null;
     }
@@ -50,6 +51,13 @@ export class GridView extends EventTarget {
     this.canvas.removeEventListener('pointerdown', this._md);
     this.canvas.removeEventListener('contextmenu', this._prevent);
     this._removePointerEvents();
+  }
+
+  setReadOnly(readonly = true) {
+    if (readonly && !this._readonly) {
+      this._removePointerEvents();
+    }
+    this._readonly = readonly;
   }
 
   _prevent(e) {
@@ -67,7 +75,7 @@ export class GridView extends EventTarget {
   }
 
   _md(e) {
-    if (this.updating) {
+    if (this.updating || this._readonly) {
       return;
     }
     e.preventDefault();
@@ -81,14 +89,14 @@ export class GridView extends EventTarget {
     }
     this.updating = { pointer: e.pointerId, value: updated };
     this.canvas.setPointerCapture(e.pointerId);
-    this._mm(e);
     window.addEventListener('pointermove', this._mm, { passive: true });
     window.addEventListener('pointerup', this._mu, { passive: true });
     window.addEventListener('pointercancel', this._mc, { passive: true });
+    this._mm(e);
   }
 
   _mm(e) {
-    if (e.pointerId !== this.updating.pointer) {
+    if (e.pointerId !== this.updating.pointer || this._readonly) {
       return;
     }
     const c = this._getCell(e);

@@ -33,8 +33,9 @@ const player = new GamePlayer({
 const playerTitle = el('span');
 let playerBackTarget = {};
 const playerBack = makeButton('back to list', () => router.go(playerBackTarget));
+const playerHold = el('div', { 'class': 'center' }, [player.container]);
 const playerDOM = makePage(
-  el('div', { 'class': 'center' }, [player.container]),
+  playerHold,
   playerTitle,
   [playerBack],
   [makeButton('hint', () => player.hint())],
@@ -190,13 +191,18 @@ window.addEventListener('blur', debouncedSave.immediate);
 window.addEventListener('visibilitychange', debouncedSave.immediate);
 window.addEventListener('beforeunload', debouncedSave.immediate, { passive: true });
 
-player.addEventListener('complete', async () => {
+async function handleComplete() {
+  playerHold.classList.add('celebrate');
+  player.clearHints();
+  player.setReadOnly(true);
+  // wait a moment so user is not thrown by a sudden prompt
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   try {
     await stateStore.persist();
   } catch (e) {
     console.warn(e);
   }
-});
+}
 
 const router = new Router(document.body, [
   ({ rules: compressedRules, name, editor }) => {
@@ -205,6 +211,8 @@ const router = new Router(document.body, [
     }
     const rules = decompressRules(compressedRules);
 
+    playerHold.classList.remove('celebrate');
+    player.removeEventListener('complete', handleComplete);
     player.setRules(rules);
     const { grid } = stateStore.load(compressedRules);
     if (grid) {
@@ -213,6 +221,8 @@ const router = new Router(document.body, [
       player.clear();
     }
     playerID = compressedRules;
+    player.setReadOnly(player.isComplete());
+    player.addEventListener('complete', handleComplete);
 
     const title = name ?? 'Nonogram';
     playerTitle.textContent = title;
