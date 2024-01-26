@@ -163,7 +163,13 @@ export class Resizer extends EventTarget {
     this.preview.style.height = '0';
     this.previewLabel.textContent = '';
     if (w !== start.width || h !== start.height || dx !== 0 || dy !== 0) {
-      this.dispatchEvent(new CustomEvent('change', { detail: { width: w, height: h, dx, dy } }));
+      this.dispatchEvent(new CustomEvent('change', { detail: {
+        width: w,
+        height: h,
+        // dx/dy can be fractional if Alt is held and the grid is constrained by a boundary limit
+        dx: Math.ceil(dx),
+        dy: Math.ceil(dy),
+      } }));
     }
   }
 
