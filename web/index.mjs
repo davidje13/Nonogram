@@ -211,34 +211,34 @@ const router = new Router(document.body, [
     }
     const rules = decompressRules(compressedRules);
 
-    playerHold.classList.remove('celebrate');
-    player.removeEventListener('complete', handleComplete);
     player.setRules(rules);
-    const { grid } = stateStore.load(compressedRules);
-    if (grid) {
-      player.setGrid(grid);
-    } else {
+    if (editor) {
       player.clear();
+      playerBack.textContent = 'back to editor';
+      playerBackTarget = { editor };
+    } else {
+      const { grid } = stateStore.load(compressedRules);
+      if (grid) {
+        player.setGrid(grid);
+      } else {
+        player.clear();
+      }
+      playerID = compressedRules;
+      playerBack.textContent = 'back to list';
+      playerBackTarget = {};
     }
-    playerID = compressedRules;
     player.setReadOnly(player.isComplete());
     player.addEventListener('complete', handleComplete);
 
     const title = name ?? 'Nonogram';
     playerTitle.textContent = title;
 
-    if (editor) {
-      playerBack.textContent = 'back to editor';
-      playerBackTarget = { editor };
-    } else {
-      playerBack.textContent = 'back to list';
-      playerBackTarget = {};
-    }
-
     return {
       element: playerDOM,
       title,
       unmount: () => {
+        player.removeEventListener('complete', handleComplete);
+        playerHold.classList.remove('celebrate');
         debouncedSave.immediate();
         playerID = null;
       },
