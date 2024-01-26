@@ -18,8 +18,8 @@ class RulesView extends EventTarget {
 
     this._onClick = this._on.bind(this, 'click');
     this._onDblClick = this._on.bind(this, 'dblclick');
-    this.container.addEventListener('click', this._onClick);
-    this.container.addEventListener('dblclick', this._onDblClick);
+    this.container.addEventListener('click', this._onClick, { passive: false });
+    this.container.addEventListener('dblclick', this._onDblClick, { passive: false });
   }
 
   destroy() {

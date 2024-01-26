@@ -27,19 +27,29 @@ export class GridView extends EventTarget {
     this._md = this._md.bind(this);
     this._mm = this._mm.bind(this);
     this._mu = this._mu.bind(this);
+    this._mc = this._mc.bind(this);
 
-    this.canvas.addEventListener('pointerdown', this._md);
-    this.canvas.addEventListener('contextmenu', this._prevent);
+    this.canvas.addEventListener('pointerdown', this._md, { passive: false });
+    this.canvas.addEventListener('contextmenu', this._prevent, { passive: false });
 
     this.resize({ width, height, fill });
+  }
+
+  _removePointerEvents() {
+    window.removeEventListener('pointermove', this._mm);
+    window.removeEventListener('pointerup', this._mu);
+    window.removeEventListener('pointercancel', this._mc);
+    if (this.updating) {
+      this.canvas.releasePointerCapture(this.updating.pointer);
+      this.updating = null;
+    }
   }
 
   destroy() {
     this.dirty = false;
     this.canvas.removeEventListener('pointerdown', this._md);
     this.canvas.removeEventListener('contextmenu', this._prevent);
-    window.removeEventListener('pointermove', this._mm);
-    window.removeEventListener('pointerup', this._mu);
+    this._removePointerEvents();
   }
 
   _prevent(e) {
@@ -73,7 +83,8 @@ export class GridView extends EventTarget {
     this.canvas.setPointerCapture(e.pointerId);
     this._mm(e);
     window.addEventListener('pointermove', this._mm, { passive: true });
-    window.addEventListener('pointerup', this._mu, { passive: true, once: true });
+    window.addEventListener('pointerup', this._mu, { passive: true });
+    window.addEventListener('pointercancel', this._mc, { passive: true });
   }
 
   _mm(e) {
@@ -91,10 +102,14 @@ export class GridView extends EventTarget {
       return;
     }
     this._mm(e);
-    window.removeEventListener('pointermove', this._mm);
-    window.removeEventListener('pointerup', this._mu);
-    this.canvas.releasePointerCapture(this.updating.pointer);
-    this.updating = null;
+    this._removePointerEvents();
+  }
+
+  _mc(e) {
+    if (e.pointerId !== this.updating.pointer) {
+      return;
+    }
+    this._removePointerEvents();
   }
 
   getGrid() {

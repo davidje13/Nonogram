@@ -40,6 +40,7 @@ export class Resizer extends EventTarget {
     this._mm = this._mm.bind(this);
     this._mmk = this._mmk.bind(this);
     this._mu = this._mu.bind(this);
+    this._mc = this._mc.bind(this);
 
     this.handles = [];
     for (let i = 0; i < DIRECTIONS.length; ++i) {
@@ -55,14 +56,23 @@ export class Resizer extends EventTarget {
     this.container.append(this.wrapper);
   }
 
-  destroy() {
-    for (const handle of this.handles) {
-      handle.removeEventListener('pointerdown', this._md);
-    }
+  _removePointerEvents() {
     window.removeEventListener('pointermove', this._mm);
     window.removeEventListener('keydown', this._mmk);
     window.removeEventListener('keyup', this._mmk);
     window.removeEventListener('pointerup', this._mu);
+    window.removeEventListener('pointercancel', this._mc);
+    if (this.dragState) {
+      this.dragState.handle.releasePointerCapture(this.dragState.pointer);
+      this.dragState = null;
+    }
+  }
+
+  destroy() {
+    for (const handle of this.handles) {
+      handle.removeEventListener('pointerdown', this._md);
+    }
+    this._removePointerEvents();
   }
 
   _md(e) {
@@ -91,7 +101,8 @@ export class Resizer extends EventTarget {
     window.addEventListener('pointermove', this._mm, { passive: true });
     window.addEventListener('keydown', this._mmk, { passive: true });
     window.addEventListener('keyup', this._mmk);
-    window.addEventListener('pointerup', this._mu, { passive: true, once: true });
+    window.addEventListener('pointerup', this._mu, { passive: true });
+    window.addEventListener('pointercancel', this._mc, { passive: true });
     this.preview.style.display = 'grid';
     this._mm(e);
   }
@@ -144,20 +155,28 @@ export class Resizer extends EventTarget {
     this.dragState.latest = { x: e.clientX, y: e.clientY, altKey: e.altKey };
     const { w, h, dx, dy } = this._updatePreview();
     const { start } = this.dragState;
-    window.removeEventListener('pointermove', this._mm);
-    window.removeEventListener('keydown', this._mmk);
-    window.removeEventListener('keyup', this._mmk);
-    window.removeEventListener('pointerup', this._mu);
-    this.dragState.handle.releasePointerCapture(this.dragState.pointer);
+    this._removePointerEvents();
     this.preview.style.display = 'none';
     this.preview.style.left = '0';
     this.preview.style.width = '0';
     this.preview.style.top = '0';
     this.preview.style.height = '0';
     this.previewLabel.textContent = '';
-    this.dragState = null;
     if (w !== start.width || h !== start.height || dx !== 0 || dy !== 0) {
       this.dispatchEvent(new CustomEvent('change', { detail: { width: w, height: h, dx, dy } }));
     }
+  }
+
+  _mc(e) {
+    if (e.pointerId !== this.dragState.pointer) {
+      return;
+    }
+    this._removePointerEvents();
+    this.preview.style.display = 'none';
+    this.preview.style.left = '0';
+    this.preview.style.width = '0';
+    this.preview.style.top = '0';
+    this.preview.style.height = '0';
+    this.previewLabel.textContent = '';
   }
 }
