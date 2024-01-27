@@ -1,10 +1,11 @@
 import { UNKNOWN } from '../../constants.mjs';
 
-export const isolatedRules = (perRuleMethod) => (rules) => {
+export const isolatedRules = (perRuleMethod, { baseDifficulty = 1, tedium = 1 } = {}) => (rules) => {
   const auxRules = rules.map(({ raw, cellIndices }) => ({
     boardLine: new Uint8Array(cellIndices.length),
     cellIndices,
     method: perRuleMethod(raw),
+    difficulty: Math.max(1, raw.length) * baseDifficulty,
     count: raw.length,
   }));
 
@@ -33,6 +34,8 @@ export const isolatedRules = (perRuleMethod) => (rules) => {
         hint: {
           type: 'rule',
           paths: [bestRule.cellIndices],
+          difficulty: bestRule.difficulty,
+          tedium,
         },
       };
     }

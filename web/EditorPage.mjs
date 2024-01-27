@@ -9,7 +9,7 @@ import { el } from './dom.mjs';
 
 export class EditorPage {
   constructor({ width, height, cellWidth, cellHeight }) {
-    const validation = el('div', { 'class': 'validation' });
+    this.validation = el('div', { 'class': 'validation' });
 
     this.editorView = new GridView({
       width,
@@ -20,41 +20,17 @@ export class EditorPage {
       getChange: (v, alt) => alt ? null : (v === ON ? OFF : ON),
     });
 
-    const liveSolver = new LiveSolver();
-
-    liveSolver.addEventListener('begin', () => {
-      validation.textContent = 'Checking game\u2026';
-      validation.className = 'validation checking';
-      this.editorView.clearMarked();
-    });
-
-    liveSolver.addEventListener('complete', ({ detail }) => {
-      if (!detail.error) {
-        validation.textContent = 'Game is valid.';
-        validation.className = 'validation valid';
-      } else if (detail.error instanceof AmbiguousError) {
-        const cells = [];
-        for (let i = 0; i < detail.board.length; ++i) {
-          if (detail.board[i] === UNKNOWN) {
-            cells.push(i);
-          }
-        }
-        this.editorView.mark('cells', cells);
-        validation.textContent = 'Game is ambiguous.';
-        validation.className = 'validation ambiguous';
-      } else {
-        console.error(detail.error);
-        validation.textContent = 'Error checking game.';
-        validation.className = 'validation error';
-      }
-    });
-
+    this.liveSolver = new LiveSolver();
     const preview = new GridPreview();
 
-    const editorChanged = () => {
+    const editorChanged = async () => {
       const rules = this.getRules();
       preview.setRules(rules);
-      liveSolver.solveInBackground(compileGame(rules));
+
+      const game = compileGame(rules);
+      if (await this._validateGame(game)) {
+        await this._judgeGame(game);
+      }
     };
 
     this.editorView.addEventListener('change', editorChanged);
@@ -76,10 +52,49 @@ export class EditorPage {
     }));
 
     this.container = editorResizer.container;
-    this.validation = validation;
     this.preview = preview.container;
 
     editorChanged();
+  }
+
+  async _validateGame(game) {
+    this.validation.textContent = 'Checking game\u2026';
+    this.validation.className = 'validation checking';
+    this.editorView.clearMarked();
+
+    try {
+      await this.liveSolver.solve(game);
+      this.validation.textContent = 'Game is valid.';
+      this.validation.className = 'validation valid';
+      return true;
+    } catch (e) {
+      if (e instanceof AmbiguousError) {
+        const cells = [];
+        for (let i = 0; i < e.data.board.length; ++i) {
+          if (e.data.board[i] === UNKNOWN) {
+            cells.push(i);
+          }
+        }
+        this.editorView.mark('cells', cells);
+        this.validation.textContent = 'Game is ambiguous.';
+        this.validation.className = 'validation ambiguous';
+      } else {
+        console.error(e);
+        this.validation.textContent = 'Error checking game.';
+        this.validation.className = 'validation error';
+      }
+    }
+    return false;
+  }
+
+  async _judgeGame(game) {
+    // TODO
+    //try {
+    //  const { judge } = await this.liveSolver.judge(game);
+    //  console.log(judge);
+    //} catch (e) {
+    //  console.error(e);
+    //}
   }
 
   clear() {

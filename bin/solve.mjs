@@ -8,18 +8,8 @@ import { compileGame } from '../src/game.mjs';
 import { UNKNOWN } from '../src/constants.mjs';
 import { compressImage } from '../src/export/image.mjs';
 import { compressRules } from '../src/export/rules.mjs';
-import { solver } from '../src/solver/solver.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
-import { implications } from '../src/solver/methods/implications.mjs';
-import { fork } from '../src/solver/methods/fork.mjs';
-import { isolatedRules } from '../src/solver/methods/isolated-rules.mjs';
-import { perlRegexp } from '../src/solver/methods/isolated-rules/perl-regexp.mjs';
-
-const fastSolver = solver(
-  isolatedRules(perlRegexp),
-  implications(),
-  fork({ parallel: false }),
-);
+import { fastSolver } from '../src/solver/standard-solvers.mjs';
 
 for (const { name, rules } of readInputRules()) {
   process.stdout.write(`\nSolving ${name}\n`);

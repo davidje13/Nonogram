@@ -120,6 +120,8 @@ function applyToState(state, onImp, offImp) {
 export const implications = ({
   implicationFinder = perlRegexp,
   maxDepth = Number.POSITIVE_INFINITY,
+  baseDifficulty = 1,
+  tedium = 1,
 } = {}) => (rules) => {
   const auxRules = rules.map(({ raw, cellIndices }) => ({
     cellIndices,
@@ -159,7 +161,12 @@ export const implications = ({
             ...findPath(invalidImp.resolved, contradiction ^ 1),
           ];
           score = validImp.resolved.size - path.length * state.board.length;
-          hintDetail = { type: 'contradiction', paths: [path] };
+          hintDetail = {
+            type: 'contradiction',
+            paths: [path],
+            difficulty: path.length * baseDifficulty,
+            tedium,
+          };
         } else {
           let bestDepth = Number.POSITIVE_INFINITY;
           let bestTarget = null;
@@ -176,12 +183,13 @@ export const implications = ({
           }
           if (bestTarget !== null) {
             score = total - bestDepth * state.board.length;
+            const pathOn = findPath(onImp.resolved, bestTarget).reverse();
+            const pathOff = findPath(offImp.resolved, bestTarget).reverse();
             hintDetail = {
               type: 'regardless',
-              paths: [
-                findPath(onImp.resolved, bestTarget).reverse(),
-                findPath(offImp.resolved, bestTarget).reverse(),
-              ],
+              paths: [pathOn, pathOff],
+              difficulty: (pathOn.length + pathOff.length) * baseDifficulty,
+              tedium,
             };
           }
         }

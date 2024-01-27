@@ -1,11 +1,10 @@
+import { Judge } from './Judge.mjs';
 import { AmbiguousError } from './errors.mjs';
 
 const workerPath = new URL('./live-solver-worker.mjs', import.meta.url).href;
 
-export class LiveSolver extends EventTarget {
+export class LiveSolver {
   constructor() {
-    super();
-
     this.activeID = 0;
     this.callback = null;
     this.worker = new Worker(workerPath, { type: 'module' });
@@ -14,29 +13,39 @@ export class LiveSolver extends EventTarget {
         if (typeof error === 'object' && error?.exampleBoards) {
           error = new AmbiguousError(error.exampleBoards);
         }
-        this.callback(error, data);
+        const fn = this.callback;
+        this.callback = null;
+        fn(error, data);
       }
     });
   }
 
-  solveInBackground(game, current = null) {
-    ++this.activeID;
-    this.callback = (error, { board }) => this.dispatchEvent(new CustomEvent('complete', { detail: { error, board } }));
-    this.dispatchEvent(new CustomEvent('begin'));
-    this.worker.postMessage({ game, current, id: this.activeID });
-  }
-
-  hint(game, current) {
+  _run(game, current, mode) {
     return new Promise((resolve, reject) => {
       ++this.activeID;
       this.callback = (error, data) => {
         if (error) {
+          error.data = data;
           reject(error);
         } else {
           resolve(data);
         }
       };
-      this.worker.postMessage({ game, current, id: this.activeID, hint: true });
+      this.worker.postMessage({ game, current, id: this.activeID, mode });
     });
+  }
+
+  solve(game, current = null) {
+    return this._run(game, current, 'solve');
+  }
+
+  async judge(game, current = null) {
+    const data = await this._run(game, current, 'judge');
+    data.judge = Object.assign(new Judge(0, 0), data.judge);
+    return data;
+  }
+
+  hint(game, current) {
+    return this._run(game, current, 'hint');
   }
 }

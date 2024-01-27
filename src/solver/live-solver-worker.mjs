@@ -1,46 +1,29 @@
 import { setImmediate } from '../util/setImmediate.mjs';
 import { UNKNOWN } from '../constants.mjs';
-import { solver } from './solver.mjs';
-import { implications } from './methods/implications.mjs';
-import { fork } from './methods/fork.mjs';
-import { isolatedRules } from './methods/isolated-rules.mjs';
-import { trivial } from './methods/isolated-rules/trivial.mjs';
-import { caps } from './methods/isolated-rules/caps.mjs';
-import { regExp } from './methods/isolated-rules/regexp.mjs';
-import { perlRegexp } from './methods/isolated-rules/perl-regexp.mjs';
+import { fastSolver, hintSolver } from './standard-solvers.mjs';
+import { Judge } from './Judge.mjs';
 
-let activeID = null;
-let isHint = false;
+let active = null;
 let board = null;
 let iterator = null;
 let nextStep = null;
 
-const fastSolver = solver(
-  isolatedRules(perlRegexp),
-  implications(),
-  fork({ parallel: false }),
-);
-
-const hintSolver = solver(
-  isolatedRules(trivial),
-  isolatedRules(regExp),
-  isolatedRules(perlRegexp),
-  implications(),
-  fork({ parallel: false, maxDepth: 5, fastSolve: false }),
-  fork({ parallel: false }),
-);
-
-addEventListener('message', ({ data: { game, current, id, hint = false } }) => {
-  activeID = id;
-  isHint = hint;
+addEventListener('message', ({ data: { game, current, id, mode } }) => {
+  if (mode !== 'hint' && mode !== 'solve' && mode !== 'judge') {
+    throw new Error(`unknown mode: ${mode}`);
+  }
+  active = { id, mode };
   board = new Uint8Array(game.w * game.h);
   if (current) {
     board.set(current);
   } else {
     board.fill(UNKNOWN);
   }
-  const solver = hint ? hintSolver : fastSolver;
-  iterator = solver(game.rules).solveSteps(board, hint);
+  if (active.mode === 'judge') {
+    active.judge = new Judge(game.w, game.h);
+  }
+  const solver = (active.mode === 'solve') ? fastSolver : hintSolver;
+  iterator = solver(game.rules).solveSteps(board, active.mode !== 'solve');
   if (nextStep === null) {
     step();
   }
@@ -50,24 +33,39 @@ function step() {
   nextStep = null;
   const timeout = Date.now() + 20;
   try {
-    if (isHint) {
-      while (Date.now() < timeout) {
-        const i = iterator.next();
-        if (i.value?.hint || i.done) {
-          postMessage({ id: activeID, board, hint: i.value?.hint ?? null, error: null });
-          return;
+    switch (active.mode) {
+      case 'hint':
+        while (Date.now() < timeout) {
+          const i = iterator.next();
+          if (i.value?.hint || i.done) {
+            postMessage({ id: active.id, board, hint: i.value?.hint ?? null, error: null });
+            return;
+          }
         }
-      }
-    } else {
-      while (Date.now() < timeout) {
-        if (iterator.next().done) {
-          postMessage({ id: activeID, board, error: null });
-          return;
+        break;
+      case 'judge':
+        while (Date.now() < timeout) {
+          const i = iterator.next();
+          active.judge.accumulate(i.value);
+          if (i.done) {
+            postMessage({ id: active.id, board, judge: { ...active.judge }, error: null });
+            return;
+          }
         }
-      }
+        break;
+      case 'solve':
+        while (Date.now() < timeout) {
+          if (iterator.next().done) {
+            postMessage({ id: active.id, board, error: null });
+            return;
+          }
+        }
+        break;
+      default:
+        throw new Error('unknown mode');
     }
     nextStep = setImmediate(step);
   } catch (error) {
-    postMessage({ id: activeID, board, error: { message: error.message, ...error } });
+    postMessage({ id: active.id, board, error: { message: error.message, ...error } });
   }
 }

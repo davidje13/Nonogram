@@ -119,6 +119,7 @@ function* runParallel(paths, maxDepth, check, resultOut) {
         const outcome = [...valid, ...possible];
         if (outcome.length === 1) {
           resultOut.state = outcome[0];
+          resultOut.depth = n;
         }
         return;
       }
@@ -129,14 +130,16 @@ function* runParallel(paths, maxDepth, check, resultOut) {
 function* runSynchronous(paths, maxDepth, check, resultOut) {
   let stuck = false;
   let result = null;
+  let actualDepth = Number.POSITIVE_INFINITY;
   let remaining = paths.length;
   for (const path of paths) {
     if (remaining === 1 && result === null) {
-      resultOut.state = path.state;
-      return;
+      result = path.state;
+      break;
     }
+    let n = 0;
     try {
-      for (let n = 0; ; ++n) {
+      while (true) {
         const sub = path.iterator.next();
         check(path.state);
         if (sub.done) {
@@ -152,6 +155,7 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
         if (n >= maxDepth) {
           throw new StuckError();
         }
+        ++n;
         yield;
       }
     } catch (e) {
@@ -170,8 +174,10 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
         throw e;
       }
     }
+    actualDepth = Math.min(actualDepth, n);
   }
   resultOut.state = result;
+  resultOut.depth = actualDepth;
 }
 
 export const fork = ({
@@ -179,6 +185,8 @@ export const fork = ({
   checker = perlRegexp,
   maxDepth = Number.POSITIVE_INFINITY,
   fastSolve = true,
+  baseDifficulty = 1,
+  baseTedium = 1,
 } = {}) => (rules) => {
   const { check, auxChecks } = makeCheck(checker, rules);
   const fn = parallel ? runParallel : runSynchronous;
@@ -214,7 +222,12 @@ export const fork = ({
         if (result.conflictIndex !== null) {
           path.push(result.conflictIndex);
         }
-        yield { hint: { type: 'fork', paths: [path] } };
+        yield { hint: {
+          type: 'fork',
+          paths: [path],
+          difficulty: result.depth * baseDifficulty,
+          tedium: result.depth * 2 * baseTedium,
+        } };
       }
       if (fastSolve) {
         state.set(result.state);
