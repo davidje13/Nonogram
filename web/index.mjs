@@ -274,8 +274,10 @@ const router = new Router(document.body, [
 ]);
 
 const games = [
+  { name: 'cool beans', rules: 'R-kI6X6AI5rM1zkUbCHBrGkMqHk8vUbI5BQHSEjstl5PQ6' }, // Jaws poster
   { name: 'dice', rules: 'R_9TaWbQJuBWBkFAgtNLXRr4IKBBBwAgkUCVBrw' }, // davidje13 CC BY-SA
   { name: 'football', rules: 'RSJH58Z7Dnyl9tWtZGp7r8XqjLwdrazUm-812Xl5kSoFuEelf7b7FW0LhH2lo-VloqQ' }, // https://en.wikipedia.org/wiki/Nonogram
+  { name: 'genuine coconut', rules: 'R_-vr-f3vm3ePu9H6APsD9gfw_v9_fizbnfLu7_c_rfZ_-N_EfxL8v19c' },
   { name: 'hilbert', rules: 'R__rcyADYw0jrckeeN0rWA63G63LAdK3pygdbkHHDYAHaIu0TAA44aDrcoHpw' }, // Third order Hilbert Curve
   { name: 'lcd5', rules: 'R-pDX5Py6dUnVJ0WT9fnoZdDl0OXk3Pa8AM6MmA0VQ1c6udXOrnVz0QPcgB2QDwA' }, // davidje13 CC BY-SA
   { name: 'spiral', rules: 'R_-bo6xsGkYCWAwAMASgWGsbIai5Pm6OouDULASwGQEwAMAlAwVY2Tpo' }, // davidje13 CC BY-SA

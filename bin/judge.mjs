@@ -6,6 +6,7 @@ import { UNKNOWN } from '../src/constants.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
 import { fastSolver, hintSolver } from '../src/solver/standard-solvers.mjs';
 import { Judge } from '../src/solver/Judge.mjs';
+import { writeCSVCell } from '../src/data/csv.mjs';
 
 process.stdout.write('Game,Width,Height,Difficulty,Tedium,Steps\n');
 const errors = [];
@@ -54,15 +55,5 @@ function row({ name, game, judge }) {
     judge?.difficulty,
     judge?.tedium,
     judge?.steps,
-  ].map(cell).join(',') + '\n');
-}
-
-function cell(v) {
-  if (v === null || v === undefined) {
-    return '';
-  }
-  if (typeof v === 'string' && /^[a-zA-Z0-9]*$/.test(v)) {
-    return v;
-  }
-  return JSON.stringify(v);
+  ].map(writeCSVCell).join(',') + '\n');
 }

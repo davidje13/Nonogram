@@ -95,7 +95,7 @@ nav button:active:hover {
 }
 
 .game-list .item.done {
-  border-color: #006600;
+  border-color: #88CC88;
 }
 
 .game-list .item:hover, .game-list .item:active {

@@ -14,7 +14,7 @@ export function* readInputRules() {
     }
   }
   for (const file of files) {
-    const content = readFileSync(file).toString();
+    const content = isRaw(file) ? file : readFileSync(file).toString();
     if (content[0] === '{') {
       yield { name: file, rules: extractRules(JSON.parse(content)) };
     } else if (content.includes(',')) {
@@ -29,4 +29,17 @@ export function* readInputRules() {
       yield { name: file, rules: decompressRules(content.trim()) };
     }
   }
+}
+
+function isRaw(file) {
+  if (file.startsWith('{')) {
+    try {
+      JSON.parse(file);
+      return true;
+    } catch (ignore) {}
+  }
+  if (/^R[A-Za-z0-9\-_]+$/.test(file)) {
+    return true;
+  }
+  return false;
 }
