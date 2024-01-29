@@ -1,8 +1,15 @@
 import { UNKNOWN, ON, OFF } from '../src/constants.mjs';
 import { el } from './dom.mjs';
 
+const cBackOff = '#FFFFFF';
+const cBackOn = '#222222';
+const cCross = '#808080';
+const cGridOffMinor = '#DDDDDD';
+const cGridOffMajor = '#444444';
+const gGridOnOverlay = '#444444';
+
 export class GridView extends EventTarget {
-  constructor({ width = 0, height = 0, majorX = 5, majorY = 5, cellWidth, cellHeight, fill = UNKNOWN, getChange = () => null }) {
+  constructor({ width = 0, height = 0, majorX = 5, majorY = 5, cellWidth, cellHeight, border = 1, outerBorder = 1, fill = UNKNOWN, getChange = () => null }) {
     super();
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this.w = 0;
@@ -12,7 +19,8 @@ export class GridView extends EventTarget {
     this.cw = cellWidth * this.dpr;
     this.ch = cellHeight * this.dpr;
     this.getChange = getChange;
-    this.border = 1 * this.dpr;
+    this.border = border * this.dpr;
+    this.outerBorder = outerBorder * this.dpr;
     this.majorX = majorX;
     this.majorY = majorY;
     this.values = new Uint8Array(0);
@@ -66,8 +74,9 @@ export class GridView extends EventTarget {
 
   _getCell(e) {
     const bounds = this.canvas.getBoundingClientRect();
-    const x = Math.floor(((e.clientX - bounds.left) * this.dpr - this.border * 0.5) / (this.cw + this.border));
-    const y = Math.floor(((e.clientY - bounds.top) * this.dpr - this.border * 0.5) / (this.ch + this.border));
+    const o = this.border * 0.5 - this.outerBorder;
+    const x = Math.floor(((e.clientX - bounds.left) * this.dpr + o) / (this.cw + this.border));
+    const y = Math.floor(((e.clientY - bounds.top) * this.dpr + o) / (this.ch + this.border));
     if (x < 0 || x >= this.w || y < 0 || y >= this.h) {
       return null;
     }
@@ -212,26 +221,30 @@ export class GridView extends EventTarget {
   }
 
   async _init() {
-    const { cw, ch } = this;
-    this.canvas.width = cw * 4;
-    this.canvas.height = ch;
+    const { cw, ch, border } = this;
+    const tw = cw + border * 2;
+    const th = ch + border * 2;
+    this.canvas.width = tw * 4;
+    this.canvas.height = th;
     this.lastw = -1;
     this.lasth = -1;
 
-    this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(cw * ON, 0, cw, ch);
-    this.ctx.fillStyle = '#EEEEEE';
-    this.ctx.fillRect(cw * OFF, 0, cw, ch);
-    this.ctx.fillRect(cw * UNKNOWN, 0, cw, ch);
-    this.ctx.strokeStyle = '#808080';
+    this.ctx.fillStyle = gGridOnOverlay;
+    this.ctx.fillRect(tw * ON, 0, tw, th);
+    this.ctx.fillStyle = cBackOn;
+    this.ctx.fillRect(tw * ON + border, border, cw, ch);
+    this.ctx.fillStyle = cBackOff;
+    this.ctx.fillRect(tw * OFF + border, border, cw, ch);
+    this.ctx.fillRect(tw * UNKNOWN + border, border, cw, ch);
+    this.ctx.strokeStyle = cCross;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.ctx.lineWidth = 0.6 * this.dpr;
     this.ctx.beginPath();
-    this.ctx.moveTo(cw * OFF + cw * 0.25, ch * 0.25);
-    this.ctx.lineTo(cw * OFF + cw * 0.75, ch * 0.75);
-    this.ctx.moveTo(cw * OFF + cw * 0.25, ch * 0.75);
-    this.ctx.lineTo(cw * OFF + cw * 0.75, ch * 0.25);
+    this.ctx.moveTo(tw * OFF + border + cw * 0.25, border + ch * 0.25);
+    this.ctx.lineTo(tw * OFF + border + cw * 0.75, border + ch * 0.75);
+    this.ctx.moveTo(tw * OFF + border + cw * 0.25, border + ch * 0.75);
+    this.ctx.lineTo(tw * OFF + border + cw * 0.75, border + ch * 0.25);
     this.ctx.stroke();
 
     this.tiles = await createImageBitmap(this.canvas, 0, 0, this.canvas.width, this.canvas.height);
@@ -257,10 +270,11 @@ export class GridView extends EventTarget {
     }
     this.dirty = false;
 
-    const { w, h, cw, ch, border } = this;
+    const { w, h, cw, ch, border, outerBorder, majorX, majorY } = this;
+    const o = outerBorder - border;
 
-    const fullWidth = w * (cw + border) + border;
-    const fullHeight = h * (ch + border) + border;
+    const fullWidth = w * (cw + border) - border + outerBorder * 2;
+    const fullHeight = h * (ch + border) - border + outerBorder * 2;
     if (this.lastw !== fullWidth || this.lasth !== fullHeight) {
       this.canvas.width = fullWidth;
       this.canvas.height = fullHeight;
@@ -270,27 +284,37 @@ export class GridView extends EventTarget {
       this.lasth = fullHeight;
     }
 
-    this.ctx.fillStyle = '#C0C0C0';
+    this.ctx.fillStyle = cGridOffMinor;
     this.ctx.fillRect(0, 0, fullWidth, fullHeight);
 
-    this.ctx.fillStyle = '#666666';
-    if (this.majorX) {
-      for (let x = 0; x <= w; x += this.majorX) {
-        this.ctx.fillRect(x * (cw + border), 0, border, fullHeight);
+    this.ctx.fillStyle = cGridOffMajor;
+    if (majorX) {
+      this.ctx.fillRect(0, 0, outerBorder, fullHeight);
+      for (let x = majorX; x < w; x += majorX) {
+        this.ctx.fillRect(x * (cw + border) + o, 0, border, fullHeight);
+      }
+      if (w % majorX === 0) {
+        this.ctx.fillRect(fullWidth - outerBorder, 0, outerBorder, fullHeight);
       }
     }
-    if (this.majorY) {
-      for (let y = 0; y <= h; y += this.majorY) {
-        this.ctx.fillRect(0, y * (ch + border), fullWidth, border);
+    if (majorY) {
+      this.ctx.fillRect(0, 0, fullWidth, outerBorder);
+      for (let y = majorY; y < h; y += majorY) {
+        this.ctx.fillRect(0, y * (ch + border) + o, fullWidth, border);
+      }
+      if (h % majorY === 0) {
+        this.ctx.fillRect(0, fullHeight - outerBorder, fullWidth, outerBorder);
       }
     }
 
+    const tw = cw + border * 2;
+    const th = ch + border * 2;
     for (let y = 0; y < h; ++y) {
-      const yy = y * (ch + border) + border;
+      const yy = y * (ch + border) + outerBorder;
       for (let x = 0; x < w; ++x) {
         const state = this.values[y * w + x];
-        const xx = x * (cw + border) + border;
-        this.ctx.drawImage(this.tiles, state * cw, 0, cw, ch, xx, yy, cw, ch);
+        const xx = x * (cw + border) + outerBorder;
+        this.ctx.drawImage(this.tiles, state * tw, 0, tw, th, xx - border, yy - border, tw, th);
       }
     }
 

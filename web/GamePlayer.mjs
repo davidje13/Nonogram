@@ -8,11 +8,9 @@ const STATE_INVALID = 1;
 const STATE_COMPLETE = 2;
 
 class RulesView extends EventTarget {
-  constructor({ cellSize, border, align, ruleChecker = null }) {
+  constructor({ align, ruleChecker = null }) {
     super();
     this.container = el('div', { 'class': `rules align-${align}` });
-    this.container.style.setProperty('--cellSize', `${cellSize}px`);
-    this.container.style.setProperty('--border', `${border}px`);
     this._ruleChecker = ruleChecker;
     this._rules = [];
 
@@ -108,32 +106,28 @@ export class GamePlayer extends EventTarget {
     this._hintLevel = 0;
     this._hinting = false;
     this._readonly = false;
-    this._rulesT = new RulesView({
-      cellSize,
-      border,
-      align: 'bottom',
-      ruleChecker,
-    });
-    this._rulesL = new RulesView({
-      cellSize,
-      border,
-      align: 'right',
-      ruleChecker,
-    });
+    const outerBorder = border;
+    this._rulesT = new RulesView({ align: 'bottom', ruleChecker });
+    this._rulesL = new RulesView({ align: 'right', ruleChecker });
     this._display = new GridView({
       cellWidth: cellSize,
       cellHeight: cellSize,
-      border,
+      border: border,
+      outerBorder,
       fill: UNKNOWN,
       getChange: (v, alt) => alt ? (v === OFF ? UNKNOWN : OFF) : (v === ON ? UNKNOWN : ON),
     });
     this._display.addEventListener('change', this._change.bind(this));
     this.container = el('div', { 'class': 'game-player' }, [
-      el('div'),
+      el('div', { 'class': 'decoration' }),
+      el('div', { 'class': 'corner' }),
       this._rulesT.container,
       this._rulesL.container,
       this._display.canvas,
     ]);
+    this.container.style.setProperty('--cellSize', `${cellSize}px`);
+    this.container.style.setProperty('--border', `${border}px`);
+    this.container.style.setProperty('--outerBorder', `${outerBorder}px`);
     this._rulesT.addEventListener('click', (e) => {
       if (this._readonly) {
         return;

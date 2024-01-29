@@ -1,7 +1,24 @@
 .game-player {
+  position: relative;
   display: inline-grid;
   grid-template-columns: auto auto;
   grid-template-rows: auto auto;
+  padding: var(--outerBorder);
+  --rule-padding: 15px;
+  gap: 0;
+  background: #444444;
+  border-radius: 2px;
+}
+
+.game-player .decoration {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.game-player .corner {
+  margin: var(--outerBorder);
+  background: #EEEEEE;
 }
 
 .game-player .rules, .game-player .rules > div {
@@ -9,6 +26,15 @@
   flex-direction: row;
   justify-content: flex-start;
   gap: var(--border);
+}
+
+.game-player .rules {
+  background: #DDDDDD;
+  margin: 1px;
+}
+
+.game-player .rules > div {
+  background: #FFFFFF;
 }
 
 .game-player .rules > div > div {
@@ -26,11 +52,23 @@
 
 .game-player .rules .error {
   color: #CC0066;
+  background: #FFEEEE;
 }
 
-.game-player .rules.align-top, .game-player .rules.align-bottom {
-  padding-left: var(--border);
-  padding-right: var(--border);
+.game-player .rules.align-bottom > div {
+  padding-top: var(--rule-padding);
+}
+
+.game-player .rules.align-top > div {
+  padding-bottom: var(--rule-padding);
+}
+
+.game-player .rules.align-left > div {
+  padding-right: var(--rule-padding);
+}
+
+.game-player .rules.align-right > div {
+  padding-left: var(--rule-padding);
 }
 
 .game-player .rules.align-top > div, .game-player .rules.align-bottom > div {
@@ -39,8 +77,6 @@
 
 .game-player .rules.align-left, .game-player .rules.align-right {
   flex-direction: column;
-  padding-top: var(--border);
-  padding-bottom: var(--border);
 }
 
 .game-player .rules.align-bottom > div, .game-player .rules.align-right > div {
