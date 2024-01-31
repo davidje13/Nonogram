@@ -1,6 +1,6 @@
 import { setImmediate } from '../util/setImmediate.mjs';
 import { UNKNOWN } from '../constants.mjs';
-import { fastSolver, hintSolver } from './standard-solvers.mjs';
+import { fastSolver, thoroughSolver, hintSolver } from './standard-solvers.mjs';
 import { Judge } from './Judge.mjs';
 
 let active = null;
@@ -8,8 +8,16 @@ let board = null;
 let iterator = null;
 let nextStep = null;
 
+const MODES = new Map([
+  ['solve', { solver: fastSolver, hint: false }],
+  ['check', { solver: thoroughSolver, hint: false }],
+  ['judge', { solver: hintSolver, hint: true }],
+  ['hint', { solver: hintSolver, hint: true }],
+]);
+
 addEventListener('message', ({ data: { game, current, id, mode } }) => {
-  if (mode !== 'hint' && mode !== 'solve' && mode !== 'judge') {
+  const m = MODES.get(mode);
+  if (!m) {
     throw new Error(`unknown mode: ${mode}`);
   }
   active = { id, mode };
@@ -22,8 +30,7 @@ addEventListener('message', ({ data: { game, current, id, mode } }) => {
   if (active.mode === 'judge') {
     active.judge = new Judge(game.w, game.h);
   }
-  const solver = (active.mode === 'solve') ? fastSolver : hintSolver;
-  iterator = solver(game.rules).solveSteps(board, active.mode !== 'solve');
+  iterator = m.solver(game.rules).solveSteps(board, m.hint);
   if (nextStep === null) {
     step();
   }
@@ -54,6 +61,7 @@ function step() {
         }
         break;
       case 'solve':
+      case 'check':
         while (Date.now() < timeout) {
           if (iterator.next().done) {
             postMessage({ id: active.id, board, error: null });

@@ -177,13 +177,14 @@ export class GridView extends EventTarget {
     }
   }
 
-  mark(type, cells) {
+  mark(type, cells, options = {}) {
     if (!cells.length) {
       return;
     }
     this.marks.push({
       type,
       cells: cells.map((c) => typeof c === 'number' ? { x: c % this.w, y: (c / this.w)|0 } : c),
+      options,
     });
     this._markDirty();
   }
@@ -337,12 +338,15 @@ export class GridView extends EventTarget {
           this.ctx.lineJoin = 'round';
           let prevX = 0;
           let prevY = 0;
+          const r = mark.options.r ?? 1;
+          const rStart = mark.options.rStart ?? r;
+          const rEnd = mark.options.rEnd ?? r;
           for (let i = 0; i < mark.cells.length; ++i) {
             const { x, y } = mark.cells[i];
             const xx = x * (cw + border) + border + cw * 0.5;
             const yy = y * (ch + border) + border + ch * 0.5;
             if (i === 0) {
-              this.ctx.lineWidth = 10 * this.dpr;
+              this.ctx.lineWidth = rStart * 4 * this.dpr;
               this.ctx.beginPath();
               this.ctx.moveTo(xx, yy);
               this.ctx.lineTo(xx, yy);
@@ -353,7 +357,7 @@ export class GridView extends EventTarget {
               this.ctx.moveTo(prevX, prevY);
               this.ctx.lineTo(xx, yy);
               this.ctx.stroke();
-              this.ctx.lineWidth = (i === mark.cells.length - 1 ? 6 : 4) * this.dpr;
+              this.ctx.lineWidth = (i === mark.cells.length - 1 ? rEnd : r) * 4 * this.dpr;
               this.ctx.beginPath();
               this.ctx.moveTo(xx, yy);
               this.ctx.lineTo(xx, yy);

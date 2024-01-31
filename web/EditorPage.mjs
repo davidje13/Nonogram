@@ -78,6 +78,22 @@ export class EditorPage {
         this.editorView.mark('cells', cells);
         this.validation.textContent = 'Game is ambiguous.';
         this.validation.className = 'validation ambiguous';
+        try {
+          // perform more accurate checking to see if we can narrow down the ambiguous cells
+          // (takes longer)
+          await this.liveSolver.check(game, e.data.board);
+        } catch (e) {
+          if (e instanceof AmbiguousError) {
+            const cells = [];
+            for (let i = 0; i < e.data.board.length; ++i) {
+              if (e.data.board[i] === UNKNOWN) {
+                cells.push(i);
+              }
+            }
+            this.editorView.clearMarked();
+            this.editorView.mark('cells', cells);
+          }
+        }
       } else {
         console.error(e);
         this.validation.textContent = 'Error checking game.';

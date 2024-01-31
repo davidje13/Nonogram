@@ -290,8 +290,23 @@ export class GamePlayer extends EventTarget {
     }
 
     if (level < 1 && step.hint) {
-      for (const path of step.hint.paths) {
-        this._display.mark('path', path);
+      if (step.hint.type.startsWith('fork-')) {
+        const [begin, ...rest] = step.hint.paths;
+        for (const path of rest) {
+          this._display.mark('path', path, { r: 1.5 });
+        }
+        this._display.mark('path', begin, { r: 2.5 });
+      } else if (step.hint.type.startsWith('implication-')) {
+        const [begin, target, ...rest] = step.hint.paths;
+        for (const path of rest) {
+          this._display.mark('path', path, { rEnd: 0 });
+        }
+        this._display.mark('path', begin, { r: 2.5 });
+        this._display.mark('path', target, { r: 1.5 });
+      } else {
+        for (const path of step.hint.paths) {
+          this._display.mark('path', path);
+        }
       }
       this._hintLevel = 1;
       return true;

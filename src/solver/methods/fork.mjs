@@ -77,13 +77,48 @@ function pickGuessSpot(auxChecks, state, impacts) {
   return { i: bestI, dir: bestDir };
 }
 
-function* runParallel(paths, maxDepth, check, resultOut) {
+function sharedChecker(paths, resultOut) {
+  const n = paths[0].state.board.length;
+  const unknowns = [];
+  for (let i = 0; i < n; ++i) {
+    if (paths[0].state.board[i] === UNKNOWN) {
+      unknowns.push(i);
+    }
+  }
+
+  return (depth) => {
+    const matches = unknowns.filter((i) => {
+      const v = paths[0].state.board[i];
+      if (v === UNKNOWN) {
+        return false;
+      }
+      for (let j = 1; j < paths.length; ++j) {
+        if (paths[j].state.board[i] !== v) {
+          return false;
+        }
+      }
+      return true;
+    });
+    if (!matches.length) {
+      return false;
+    }
+    resultOut.regardless = matches.map((i) => ({ cell: i, value: paths[0].state.board[i] }));
+    resultOut.depth = depth;
+    return true;
+  };
+}
+
+function* runParallel(paths, check, resultOut) {
   const valid = [];
   const possible = [];
 
-  // run both in parallel until one has a conflict (throws an exception)
-  for (let n = 0; n < maxDepth; ++n) {
-    for (const path of paths) {
+  const checkShared = sharedChecker(paths, resultOut);
+
+  // run both in parallel until one has a conflict (throws an exception),
+  // or all games agree on a particular cell's value
+  const livePaths = [...paths];
+  for (let n = 0; ; ++n) {
+    for (const path of livePaths) {
       let done = false;
       try {
         const sub = path.iterator.next();
@@ -100,20 +135,28 @@ function* runParallel(paths, maxDepth, check, resultOut) {
           if (e.conflictIndex !== null) {
             resultOut.conflictIndex = e.conflictIndex;
           }
+        } else if (e instanceof AmbiguousError) {
+          if (checkShared(n)) { // prefer to solve as much as possible when game is ambiguous
+            return;
+          }
+          throw e;
         } else {
           throw e;
         }
         done = true;
       }
       if (done) {
-        paths.splice(paths.indexOf(path), 1);
-        if (paths.length === 1 && valid.length + possible.length === 0) {
-          possible.push(paths.pop().state);
+        livePaths.splice(livePaths.indexOf(path), 1);
+        if (livePaths.length === 1 && valid.length + possible.length === 0) {
+          possible.push(livePaths.pop().state);
         }
-        if (paths.length) {
+        if (livePaths.length) {
           break;
         }
         if (valid.length > 1) {
+          if (checkShared(n)) { // prefer to solve as much as possible when game is ambiguous
+            return;
+          }
           throw new AmbiguousError(valid.map((v) => v.board));
         }
         const outcome = [...valid, ...possible];
@@ -124,10 +167,15 @@ function* runParallel(paths, maxDepth, check, resultOut) {
         return;
       }
     }
+    if (n % 30 === 0 && checkShared(n)) {
+      return;
+    }
   }
 }
 
-function* runSynchronous(paths, maxDepth, check, resultOut) {
+function* runSynchronous(paths, check, resultOut) {
+  const checkShared = sharedChecker(paths, resultOut);
+
   let stuck = false;
   let result = null;
   let actualDepth = Number.POSITIVE_INFINITY;
@@ -152,9 +200,6 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
             break;
           }
         }
-        if (n >= maxDepth) {
-          throw new StuckError();
-        }
         ++n;
         yield;
       }
@@ -170,6 +215,13 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
         }
         result = path.state;
         stuck = true;
+      } else if (e instanceof AmbiguousError) {
+        // prefer to solve as much as possible when game is ambiguous
+        // (note: this will still short-circuit the analysis, so will not resolve as much as runParallel)
+        if (checkShared(n)) {
+          return;
+        }
+        throw e;
       } else {
         throw e;
       }
@@ -183,7 +235,6 @@ function* runSynchronous(paths, maxDepth, check, resultOut) {
 export const fork = ({
   parallel = true,
   checker = perlRegexp,
-  maxDepth = Number.POSITIVE_INFINITY,
   fastSolve = true,
   baseDifficulty = 1,
   baseTedium = 1,
@@ -213,26 +264,39 @@ export const fork = ({
       path.iterator = solve(path.state);
     }
 
-    const result = { state: null, conflictIndex: null };
-    yield* fn(paths, maxDepth, check, result);
+    const result = { state: null, regardless: null, conflictIndex: null };
+    yield* fn(paths, check, result);
 
-    if (result.state) {
+    if (result.regardless) {
+      for (const { cell, value } of result.regardless) {
+        state.setCell(cell, value);
+      }
       if (hint) {
-        const path = [trial.i];
-        if (result.conflictIndex !== null) {
-          path.push(result.conflictIndex);
-        }
         yield { hint: {
-          type: 'fork',
-          paths: [path],
-          difficulty: result.depth * baseDifficulty,
+          type: 'fork-regardless',
+          paths: [[trial.i], ...result.regardless.map(({ cell }) => [cell])],
+          difficulty: result.depth * 2 * baseDifficulty,
           tedium: result.depth * 2 * baseTedium,
         } };
       }
+    }
+    if (result.state) {
       if (fastSolve) {
         state.set(result.state);
       } else {
         state.setCell(trial.i, result.state.board[trial.i]);
+      }
+      if (hint) {
+        const paths = [[trial.i]];
+        if (result.conflictIndex !== null) {
+          paths.push([result.conflictIndex]);
+        }
+        yield { hint: {
+          type: 'fork-contradiction',
+          paths,
+          difficulty: result.depth * baseDifficulty,
+          tedium: result.depth * 2 * baseTedium,
+        } };
       }
     }
   };

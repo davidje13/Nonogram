@@ -39,6 +39,10 @@ export class LiveSolver {
     return this._run(game, current, 'solve');
   }
 
+  check(game, current = null) {
+    return this._run(game, current, 'check');
+  }
+
   async judge(game, current = null) {
     const data = await this._run(game, current, 'judge');
     data.judge = Object.assign(new Judge(0, 0), data.judge);

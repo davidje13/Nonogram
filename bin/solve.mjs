@@ -9,7 +9,7 @@ import { UNKNOWN } from '../src/constants.mjs';
 import { compressImage } from '../src/export/image.mjs';
 import { compressRules } from '../src/export/rules.mjs';
 import { AmbiguousError, InvalidGameError, StuckError } from '../src/solver/errors.mjs';
-import { fastSolver } from '../src/solver/standard-solvers.mjs';
+import { thoroughSolver } from '../src/solver/standard-solvers.mjs';
 
 for (const { name, rules } of readInputRules()) {
   process.stdout.write(`\nSolving ${name}\n`);
@@ -19,7 +19,7 @@ for (const { name, rules } of readInputRules()) {
   const tmBegin = performance.now();
   let tmEnd;
   try {
-    fastSolver(game.rules).solve(board);
+    thoroughSolver(game.rules).solve(board);
     tmEnd = performance.now();
     drawGameBoard(game, board);
   } catch (e) {
