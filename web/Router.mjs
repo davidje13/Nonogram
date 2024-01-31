@@ -43,11 +43,12 @@ export class Router {
 
   go(params, updateUI = true) {
     const hash = this.makeLink(params);
-    if (this.hash === hash) {
+    const hashState = hash.substring(1);
+    if (this.hash === hashState) {
       return;
     }
     if (!updateUI) {
-      this.hash = hash;
+      this.hash = hashState;
     }
     window.location.href = hash;
   }
