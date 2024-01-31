@@ -36,11 +36,19 @@ export class Router {
     }
   }
 
-  makeLink(params) {
-    return `#${new URLSearchParams(params)}`;
+  makeLink(params, full) {
+    const prefix = full ? window.location.href.split('#')[0] : '';
+    return `${prefix}#${new URLSearchParams(params)}`;
   }
 
-  go(params) {
-    window.location.href = this.makeLink(params);
+  go(params, updateUI = true) {
+    const hash = this.makeLink(params);
+    if (this.hash === hash) {
+      return;
+    }
+    if (!updateUI) {
+      this.hash = hash;
+    }
+    window.location.href = hash;
   }
 }

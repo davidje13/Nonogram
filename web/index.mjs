@@ -24,6 +24,8 @@ function makePage(content, title, l, r) {
   ]);
 }
 
+const DEFAULT_EDITOR_GRID = 'L_9AcQ'; // Blank 15x15
+
 const player = new GamePlayer({
   cellSize: 23,
   border: 1,
@@ -42,9 +44,39 @@ const playerDOM = makePage(
 );
 
 const editor = new EditorPage({ width: 5, height: 5, cellWidth: 23, cellHeight: 23 });
+const editorCopy = makeButton('copy', async (e) => {
+  const btn = e.currentTarget;
+  try {
+    await navigator.clipboard.writeText(router.makeLink({
+      rules: compressRules(editor.getRules()),
+    }, true));
+    btn.textContent = '\u2713';
+    setTimeout(() => {
+      btn.textContent = 'copy';
+    }, 2000);
+  } catch (e) {
+    console.warn(e);
+  }
+});
+editor.addEventListener('validation', (e) => {
+  switch (e.detail.state) {
+    case 'checking':
+      editorCopy.disabled = true;
+      editorCopy.setAttribute('title', 'Checking...');
+      break;
+    case 'valid':
+      editorCopy.disabled = false;
+      editorCopy.setAttribute('title', '');
+      break;
+    case 'invalid':
+      editorCopy.disabled = true;
+      editorCopy.setAttribute('title', 'Game is ambiguous');
+      break;
+  }
+});
 const editorDOM = makePage(
   el('div', { 'class': 'center' }, [editor.container]),
-  'Nonogram editor',
+  'Editor',
   [
     makeButton('back to list', () => router.go({})),
     makeButton('clear', () => editor.clear()),
@@ -56,18 +88,7 @@ const editorDOM = makePage(
       rules: compressRules(editor.getRules()),
       editor: compressImage(editor.getGrid()),
     })),
-    makeButton('copy', async (e) => {
-      const btn = e.currentTarget;
-      try {
-        await navigator.clipboard.writeText(compressRules(editor.getRules()));
-        btn.textContent = '\u2713';
-        setTimeout(() => {
-          btn.textContent = 'copy';
-        }, 2000);
-      } catch (e) {
-        console.warn(e);
-      }
-    }),
+    editorCopy,
   ],
 );
 
@@ -76,7 +97,7 @@ const listDOM = makePage(
   gameList,
   'Nonograms',
   [],
-  [makeButton('+ new', () => router.go({ editor: '' }))],
+  [makeButton('+ new', () => router.go({ editor: DEFAULT_EDITOR_GRID }))],
 );
 
 const currentGames = new Map();
@@ -249,20 +270,23 @@ const router = new Router(document.body, [
       return null;
     }
 
-    if (compressedBitmap) {
-      try {
-        editor.setGrid(decompressImage(compressedBitmap));
-      } catch (e) {
-        console.warn(e);
-        editor.clear();
-      }
-    } else {
+    try {
+      editor.setGrid(decompressImage(compressedBitmap ?? DEFAULT_EDITOR_GRID));
+    } catch (e) {
+      console.warn(e);
       editor.clear();
     }
+
+    const updateURL = debounce((e) => router.go({ editor: compressImage(e.detail.grid) }, false), 500);
+    editor.addEventListener('change', updateURL);
 
     return {
       element: editorDOM,
       title: 'Editor',
+      unmount: () => {
+        editor.removeEventListener('change', updateURL);
+        updateURL.cancel();
+      },
     };
   },
   () => {

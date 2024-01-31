@@ -7,8 +7,9 @@ import { GridView } from './GridView.mjs';
 import { Resizer } from './Resizer.mjs';
 import { el } from './dom.mjs';
 
-export class EditorPage {
+export class EditorPage extends EventTarget {
   constructor({ width, height, cellWidth, cellHeight }) {
+    super();
     this.validation = el('div', { 'class': 'validation' });
 
     this.editorView = new GridView({
@@ -26,6 +27,8 @@ export class EditorPage {
     const editorChanged = async () => {
       const rules = this.getRules();
       preview.setRules(rules);
+
+      this.dispatchEvent(new CustomEvent('change', { detail: { grid: this.getGrid(), rules } }));
 
       const game = compileGame(rules);
       if (await this._validateGame(game)) {
@@ -61,13 +64,16 @@ export class EditorPage {
     this.validation.textContent = 'Checking game\u2026';
     this.validation.className = 'validation checking';
     this.editorView.clearMarked();
+    this.dispatchEvent(new CustomEvent('validation', { detail: { state: 'checking' } }));
 
     try {
       await this.liveSolver.solve(game);
+      this.dispatchEvent(new CustomEvent('validation', { detail: { state: 'valid' } }));
       this.validation.textContent = 'Game is valid.';
       this.validation.className = 'validation valid';
       return true;
     } catch (e) {
+      this.dispatchEvent(new CustomEvent('validation', { detail: { state: 'invalid' } }));
       if (e instanceof AmbiguousError) {
         const cells = [];
         for (let i = 0; i < e.data.board.length; ++i) {
