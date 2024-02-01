@@ -298,17 +298,24 @@ const router = new Router(document.body, [
 ]);
 
 const games = [
+  { name: 'buy gold buy', rules: 'R_8SjEzUagUbn2mgOzSMAfMPgDyGZw' }, // Marta CC BY-SA
+  { name: 'christmas tree', rules: 'R_9KNR146-Pr4_X0BRgPDg-zv9nYPC4A' }, // davidje13 CC BY-SA
   { name: 'cool beans', rules: 'R-kI6X6AI5rM1zkUbCHBrGkMqHk8vUbI5BQHSEjstl5PQ6' }, // Jaws poster
   { name: 'dice', rules: 'R_9TaWbQJuBWBkFAgtNLXRr4IKBBBwAgkUCVBrw' }, // davidje13 CC BY-SA
+  { name: 'diya', rules: 'R_9KNlj8S01FstLc9fn55HTy4bHodj2Pc7fhPp-aA' }, // davidje13 CC BY-SA
   { name: 'duck watch', rules: 'RSJBseLFZFisi0bQ2Fvpd6PYOgWW-_k-LGemS1ZrPs3Z1m7N3XYfUVMejRZ4' }, // davidje13 CC BY-SA
   { name: 'football', rules: 'RSJH58Z7Dnyl9tWtZGp7r8XqjLwdrazUm-812Xl5kSoFuEelf7b7FW0LhH2lo-VloqQ' }, // https://en.wikipedia.org/wiki/Nonogram
   { name: 'genuine coconut', rules: 'R_-vr-f3vm3ePu9H6APsD9gfw_v9_fizbnfLu7_c_rfZ_-N_EfxL8v19c' },
   { name: 'hilbert', rules: 'R__rcyADYw0jrckeeN0rWA63G63LAdK3pygdbkHHDYAHaIu0TAA44aDrcoHpw' }, // Third order Hilbert Curve
+  { name: 'kinara', rules: 'R_8VgFgAYAH__v4-vj7ncx7PHk3F-H39n3-H4vk2Ozu' }, // davidje13 CC BY-SA
   { name: 'lcd5', rules: 'R-pDX5Py6dUnVJ0WT9fnoZdDl0OXk3Pa8AM6MmA0VQ1c6udXOrnVz0QPcgB2QDwA' }, // davidje13 CC BY-SA
+  { name: 'menorah', rules: 'RSfVgAK4AC4AC4EKgC4ZUVc6Vv6n18s72aKySMiGwPxYHIhkWSKzPZw' }, // davidje13 CC BY-SA
   { name: 'not what it seems', rules: 'RUpHvL7_tn1Tf8qnvh1nlK3KFC6qHd0pbvPR5-_-bP-Sz7dUb3lk_2Psf1n81_efbL8u_TV-Sr95vxJfyf0Cn879I9530Cn5P8SX9Ur9Yvpq-Xftl_vP7v1n' }, // davidje13 CC BY-SA
+  { name: 'rangoli', rules: 'R_8WYORY2GyKBIw2xpGYNAswcixsNkUCRhtjSMwaA' }, // davidje13 CC BY-SA
   { name: 'spiral', rules: 'R_-bo6xsGkYCWAwAMASgWGsbIai5Pm6OouDULASwGQEwAMAlAwVY2Tpo' }, // davidje13 CC BY-SA
   { name: 'star 5', rules: 'R_9Rx1_-f1-Px-Pzfc5rCU255_X7_f7_X5-5zUg' }, // davidje13 CC BY-SA
   { name: 'star 6', rules: 'R_9KPH-_z-v1-v5_38fGkNNx-v1_P_8_r9fj5rA' }, // davidje13 CC BY-SA
+  { name: 'woe no', rules: 'RSJGOT5LJbfTx2y-mrYj8aoybW9j6H5P_fpyQUhdS9cfOXINeFA1EQKD1no-j6h6y0LQV4' }, // davidje13 CC BY-SA
   { name: 'yin-yang', rules: 'RSJCnpOj4dR9R9n1Pc_J-z_F_Z_I_wP6X4-nCnpOKxkmwvufgV8Cvk_S_a_3_z_P4-nA' }, // davidje13 CC BY-SA
 ];
 games.sort((a, b) => a.name > b.name ? 1 : -1);
