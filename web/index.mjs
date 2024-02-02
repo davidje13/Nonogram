@@ -195,6 +195,14 @@ function readGames(content, callback) {
 let playerID = null;
 const stateStore = new StateStore();
 
+window.exportData = () => {
+  return JSON.stringify(stateStore.export());
+};
+
+window.importData = (data) => {
+  stateStore.import(JSON.parse(data));
+};
+
 const debouncedSave = debounce(() => {
   if (playerID) {
     stateStore.save(
@@ -298,6 +306,7 @@ const router = new Router(document.body, [
 ]);
 
 const games = [
+  { name: 'busy', rules: 'RSfC78mx1R2gF-AF8AtwJfDlt7lGkbUKC7vtrt_FBo_J0yw-DUeROQ' }, // davidje13 CC BY-SA
   { name: 'buy gold buy', rules: 'R_8SjEzUagUbn2mgOzSMAfMPgDyGZw' }, // Marta CC BY-SA
   { name: 'christmas tree', rules: 'R_9KNR146-Pr4_X0BRgPDg-zv9nYPC4A' }, // davidje13 CC BY-SA
   { name: 'cool beans', rules: 'R-kI6X6AI5rM1zkUbCHBrGkMqHk8vUbI5BQHSEjstl5PQ6' }, // Jaws poster

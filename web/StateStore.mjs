@@ -42,4 +42,24 @@ export class StateStore {
     }
     throw new Error('user refused persistence');
   }
+
+  export() {
+    const data = [];
+    for (let i = 0; i < window.localStorage.length; ++i) {
+      const k = window.localStorage.key(i);
+      const v = window.localStorage.getItem(k);
+      data.push([k, v]);
+    }
+    return data;
+  }
+
+  import(data) {
+    for (const [k, v] of data) {
+      const oldData = new URLSearchParams(window.localStorage.getItem(id) ?? '');
+      const newData = new URLSearchParams(v);
+      if (Number(newData.get('s') ?? STATE_STARTED) >= Number(oldData.get('s') ?? STATE_STARTED)) {
+        window.localStorage.setItem(k, v);
+      }
+    }
+  }
 }
