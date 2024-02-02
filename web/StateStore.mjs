@@ -55,7 +55,7 @@ export class StateStore {
 
   import(data) {
     for (const [k, v] of data) {
-      const oldData = new URLSearchParams(window.localStorage.getItem(id) ?? '');
+      const oldData = new URLSearchParams(window.localStorage.getItem(k) ?? '');
       const newData = new URLSearchParams(v);
       if (Number(newData.get('s') ?? STATE_STARTED) >= Number(oldData.get('s') ?? STATE_STARTED)) {
         window.localStorage.setItem(k, v);
