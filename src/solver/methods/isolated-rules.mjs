@@ -6,7 +6,7 @@ export const isolatedRules = (perRuleMethod, { baseDifficulty = 1, tedium = 1 } 
     cellIndices,
     method: perRuleMethod(raw),
     difficulty: Math.max(1, raw.length) * baseDifficulty,
-    count: raw.length,
+    scoreMult: 1 / Math.max(1, raw.length),
   }));
 
   return function* (state, { hint }) {
@@ -18,7 +18,7 @@ export const isolatedRules = (perRuleMethod, { baseDifficulty = 1, tedium = 1 } 
         rule.method(rule.boardLine);
         if (hint) {
           const counts = state.countBoardLine(rule.boardLine, rule.cellIndices);
-          const score = (counts.on * 5 + counts.off) / (rule.count + 1);
+          const score = (counts.on * 5 + counts.off) * rule.scoreMult;
           if (score > best) {
             best = score;
             bestRule = rule;

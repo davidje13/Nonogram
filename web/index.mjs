@@ -324,6 +324,7 @@ const games = [
   { name: 'spiral', rules: 'R_-bo6xsGkYCWAwAMASgWGsbIai5Pm6OouDULASwGQEwAMAlAwVY2Tpo' }, // davidje13 CC BY-SA
   { name: 'star 5', rules: 'R_9Rx1_-f1-Px-Pzfc5rCU255_X7_f7_X5-5zUg' }, // davidje13 CC BY-SA
   { name: 'star 6', rules: 'R_9KPH-_z-v1-v5_38fGkNNx-v1_P_8_r9fj5rA' }, // davidje13 CC BY-SA
+  { name: 'star of david', rules: 'RSJBsdkXv-iaDUnFpOg1E9_xWR2gEW18mqak4tr6Jom18Wk6mk1r4oA' }, // davidje13 CC BY-SA
   { name: 'woe no', rules: 'RSJGOT5LJbfTx2y-mrYj8aoybW9j6H5P_fpyQUhdS9cfOXINeFA1EQKD1no-j6h6y0LQV4' }, // davidje13 CC BY-SA
   { name: 'yin-yang', rules: 'RSJCnpOj4dR9R9n1Pc_J-z_F_Z_I_wP6X4-nCnpOKxkmwvufgV8Cvk_S_a_3_z_P4-nA' }, // davidje13 CC BY-SA
 ];

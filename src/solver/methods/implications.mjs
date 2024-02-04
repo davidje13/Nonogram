@@ -1,6 +1,7 @@
 import { UNKNOWN, ON, OFF } from '../../constants.mjs';
 import { InvalidGameError } from '../errors.mjs';
 import { perlRegexp } from './isolated-rules/perl-regexp.mjs';
+import { makeCellRuleLookup } from './utils/rules.mjs';
 
 // TODO: the time complexity of this approach can be improved by using https://en.wikipedia.org/wiki/2-satisfiability
 // (though for normal sized grids, buildImplications is the slower part, which remains the input in 2-satisfiability)
@@ -256,19 +257,8 @@ export const implications = ({
       cellIndices,
       solve: implicationFinder(raw),
     })),
-    cellRuleLookup: new Map(),
+    cellRuleLookup: makeCellRuleLookup(rules),
   };
-  for (let i = 0; i < auxRules.rules.length; ++i) {
-    const { cellIndices } = auxRules.rules[i];
-    for (let j = 0; j < cellIndices.length; ++j) {
-      let l = auxRules.cellRuleLookup.get(cellIndices[j]);
-      if (!l) {
-        l = [];
-        auxRules.cellRuleLookup.set(cellIndices[j], l);
-      }
-      l.push({ ruleIndex: i, cellIndex: j });
-    }
-  }
 
   return function* (state, { hint, sharedState }) {
     const implications = buildImplications(auxRules, state);

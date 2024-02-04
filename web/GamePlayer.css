@@ -40,7 +40,7 @@
 .game-player .rules > div > div {
   width: var(--cellSize);
   height: var(--cellSize);
-  font: calc(var(--cellSize) * 0.6) monospace;
+  font: 300 calc(var(--cellSize) * 0.7) sans-serif;
   line-height: var(--cellSize);
   text-align: center;
 }

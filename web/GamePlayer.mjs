@@ -48,7 +48,7 @@ class RulesView extends EventTarget {
       let checker = null;
       if (rule) {
         for (const v of rule.length > 0 ? rule : [0]) {
-          const item = el('div', {}, [String(v)]);
+          const item = el('div', {}, [v.toLocaleString(undefined, { useGrouping: false })]);
           item.dataset['rule'] = this._rules.length;
           item.dataset['index'] = els.length;
           els.append(item);
