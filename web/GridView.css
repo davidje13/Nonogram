@@ -1,4 +1,7 @@
 .grid-view {
   display: block;
   image-rendering: pixelated;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }

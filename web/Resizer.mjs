@@ -47,6 +47,7 @@ export class Resizer extends EventTarget {
       const handle = el('div', { 'class': `handle ${DIRECTIONS[i].className}` });
       handle.dataset.resizeIndex = i;
       handle.addEventListener('pointerdown', this._md, { passive: false });
+      handle.addEventListener('contextmenu', prevent, { passive: false });
       this.container.append(handle);
       this.handles.push(handle);
     }
@@ -71,6 +72,7 @@ export class Resizer extends EventTarget {
   destroy() {
     for (const handle of this.handles) {
       handle.removeEventListener('pointerdown', this._md);
+      handle.removeEventListener('contextmenu', prevent);
     }
     this._removePointerEvents();
   }
@@ -98,10 +100,10 @@ export class Resizer extends EventTarget {
       handle: e.target,
       mode: DIRECTIONS[index],
     };
-    window.addEventListener('pointermove', this._mm, { passive: true });
+    window.addEventListener('pointermove', this._mm, { passive: false });
     window.addEventListener('keydown', this._mmk, { passive: true });
     window.addEventListener('keyup', this._mmk);
-    window.addEventListener('pointerup', this._mu, { passive: true });
+    window.addEventListener('pointerup', this._mu, { passive: false });
     window.addEventListener('pointercancel', this._mc, { passive: true });
     this.preview.style.display = 'grid';
     this._mm(e);
@@ -137,6 +139,7 @@ export class Resizer extends EventTarget {
     if (e.pointerId !== this.dragState.pointer) {
       return;
     }
+    e.preventDefault();
     this.dragState.latest = { x: e.clientX, y: e.clientY, altKey: e.altKey };
     this._updatePreview();
   }
@@ -185,4 +188,8 @@ export class Resizer extends EventTarget {
     this.preview.style.height = '0';
     this.previewLabel.textContent = '';
   }
+}
+
+function prevent(e) {
+  e.preventDefault();
 }
