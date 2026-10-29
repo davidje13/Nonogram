@@ -9,27 +9,27 @@ import { OFF, ON } from '../../../constants.mjs';
  * solution.
  */
 export const trivial = (rule) => {
-  let len = 0;
-  for (const v of rule) {
-    len += v + 1;
-  }
-  if (rule.length) {
-    len -= 1;
-  }
-  return (boardLine) => {
-    if (len === 0) {
-      boardLine.fill(OFF);
-      return;
-    }
-    if (len === boardLine.length) {
-      let pos = 0;
-      for (const v of rule) {
-        for (let i = 0; i < v; ++ i) {
-          boardLine[pos++] = ON;
-        }
-        boardLine[pos++] = OFF;
-      }
-      return;
-    }
-  };
+	let len = 0;
+	for (const v of rule) {
+		len += v + 1;
+	}
+	if (rule.length) {
+		len -= 1;
+	}
+	return (boardLine) => {
+		if (len === 0) {
+			boardLine.fill(OFF);
+			return;
+		}
+		if (len === boardLine.length) {
+			let pos = 0;
+			for (const v of rule) {
+				for (let i = 0; i < v; ++i) {
+					boardLine[pos++] = ON;
+				}
+				boardLine[pos++] = OFF;
+			}
+			return;
+		}
+	};
 };

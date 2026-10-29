@@ -1,15 +1,22 @@
 {
-  "name": "Nonogram",
-  "version": "1.0.0",
-  "author": "David Evans",
-  "license": "GPL-3.0-or-later",
-  "private": true,
-  "bin": "./src/index.js",
-  "scripts": {
-    "test": "lean-test",
-    "start": "python3 -m http.server -b 127.0.0.1 -d . 8080"
-  },
-  "devDependencies": {
-    "lean-test": "2.x"
-  }
+	"name": "Nonogram",
+	"version": "1.0.0",
+	"author": "David Evans",
+	"license": "GPL-3.0-or-later",
+	"private": true,
+	"bin": "./src/index.js",
+	"scripts": {
+		"format": "prettier --write .",
+		"start": "rm -rf build; mkdir -p build/static && cp web/config.json build/config.json && web-listener -c build/config.json --dir web/static --no-cache --exec 'rollup --config rollup.config.mjs --watch'",
+		"build": "rm -rf build; mkdir -p build && cp -R web/static web/config.json build && rollup --config rollup.config.mjs && cd build && zip -8Xr -n .png - * > ../web-bundle.zip",
+		"test": "lean-test && prettier --check ."
+	},
+	"devDependencies": {
+		"@rollup/plugin-node-resolve": "16.x",
+		"@rollup/plugin-terser": "1.x",
+		"lean-test": "2.x",
+		"prettier": "3.9.10",
+		"rollup": "4.x",
+		"web-listener": "1.5.x"
+	}
 }
